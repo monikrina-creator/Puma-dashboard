@@ -93,6 +93,30 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 .btn-proc:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
 .proc-log{margin-top:10px;font-size:11px;color:var(--gr-d);background:var(--gr-l);border-radius:var(--r8);padding:8px 12px;display:none;font-weight:500}
 
+/* ── DROPZONE ── */
+.dz{border:2.5px dashed var(--cal-m);border-radius:var(--r16);padding:32px 24px;text-align:center;margin-bottom:16px;background:linear-gradient(135deg,var(--cal-l),rgba(249,208,223,.15));transition:all .18s;cursor:pointer}
+.dz:hover{border-color:var(--cal-d);background:linear-gradient(135deg,rgba(39,191,191,.12),rgba(249,208,223,.22))}
+.dz.dragover{border-color:var(--cal-d);background:rgba(39,191,191,.18);transform:scale(1.01)}
+.dz-ico{font-size:34px;margin-bottom:8px}
+.dz-title{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.dz-sub{font-size:11px;color:var(--tx3)}
+.dz-sub2{font-size:10px;color:var(--tx4);margin-top:6px;font-style:italic}
+
+/* ── SAVED DATA BAR ── */
+.saved-bar{margin-top:14px;display:flex;align-items:center;justify-content:space-between;background:var(--cal-l);border:1px solid var(--cal-m);border-radius:var(--r12);padding:12px 16px;gap:12px;flex-wrap:wrap}
+.saved-info{display:flex;align-items:center;gap:10px}
+.saved-ico{font-size:22px}
+.saved-title{font-size:12px;font-weight:700;color:var(--cal-dp)}
+.saved-sub{font-size:11px;color:var(--tx3);margin-top:1px}
+
+/* ── SHARE BAR ── */
+.share-bar{margin-top:10px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--rose-l),var(--cal-l));border:1px solid var(--rose-m);border-radius:var(--r12);padding:12px 16px;gap:12px;flex-wrap:wrap}
+.share-info{display:flex;align-items:center;gap:10px;flex:1;min-width:240px}
+.share-info .saved-title{color:var(--rose-d)}
+.share-info .saved-sub{max-width:420px}
+.btn-share{display:flex;align-items:center;gap:6px;padding:9px 16px;font-size:12px;font-weight:700;border:none;border-radius:var(--r8);cursor:pointer;background:linear-gradient(135deg,var(--rose-dp),var(--rose-d));color:#fff;font-family:var(--fn);box-shadow:0 2px 8px rgba(217,100,136,.30);transition:all .15s;white-space:nowrap}
+.btn-share:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(217,100,136,.40)}
+
 /* ── KPI ── */
 .kpi-grid{display:grid;gap:12px;margin-bottom:18px}
 .kr5{grid-template-columns:repeat(5,1fr)}
@@ -267,7 +291,6 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
   </div>
   <div class="tb-right">
     <span class="upd-chip" id="upd-chip">Sin datos</span>
-    <button class="btn-ld" onclick="goPage('upload')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Cargar archivos</button>
   </div>
 </header>
 
@@ -307,6 +330,15 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
   <div class="pg-body">
     <div class="up-panel">
       <div class="up-head"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Archivos de entrada</div>
+
+      <!-- ZONA DRAG & DROP -->
+      <div class="dz" id="dropzone">
+        <div class="dz-ico">📂</div>
+        <div class="dz-title">Arrastra aquí los 4 archivos Excel juntos</div>
+        <div class="dz-sub">El sistema detecta automáticamente cuál es cuál (OL · SO Track · Pronóstico · Quiebres)</div>
+        <div class="dz-sub2">o usa las tarjetas individuales abajo</div>
+      </div>
+
       <div class="up-grid">
         <div class="up-card" id="card-ol" onclick="document.getElementById('f-ol').click()">
           <div class="up-num">Archivo 1</div><div class="up-ct">Órdenes Liberadas</div><div class="up-cd">OC · SAP Code · Depto · PD · Unidades</div><div class="up-cf" id="nm-ol"></div><div class="up-chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><input type="file" id="f-ol" accept=".xlsx,.xls" onchange="handleFile(this,'ol')">
@@ -323,13 +355,37 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
       </div>
       <button class="btn-proc" id="btn-proc" disabled onclick="processFiles()">Procesar y generar dashboard</button>
       <div class="proc-log" id="proc-log"></div>
+
+      <!-- ESTADO DE DATOS GUARDADOS -->
+      <div class="saved-bar" id="saved-bar" style="display:none">
+        <div class="saved-info">
+          <span class="saved-ico">💾</span>
+          <div>
+            <div class="saved-title">Datos guardados localmente</div>
+            <div class="saved-sub" id="saved-sub">—</div>
+          </div>
+        </div>
+        <button class="btn-clr" onclick="clearSavedData()">🗑️ Borrar datos guardados</button>
+      </div>
+
+      <!-- COMPARTIR DASHBOARD CON DATOS -->
+      <div class="share-bar" id="share-bar" style="display:none">
+        <div class="share-info">
+          <span class="saved-ico">📦</span>
+          <div>
+            <div class="saved-title">Compartir dashboard con tu equipo</div>
+            <div class="saved-sub">Genera un archivo HTML con los datos actuales incluidos — tus compañeros lo abren directo, sin cargar nada</div>
+          </div>
+        </div>
+        <button class="btn-share" onclick="exportSnapshot()">📦 Exportar Dashboard Completo</button>
+      </div>
     </div>
     <div style="background:var(--wh);border:1px solid var(--bd);border-radius:var(--r12);padding:18px 22px;box-shadow:var(--s2)">
       <div class="sec-lbl" style="margin-bottom:10px">Guía de columnas por archivo</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;font-size:11px;color:var(--tx3)">
         <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 Órdenes Liberadas</strong>Num Order → OC<br>SAP Code → código producto<br>Departamento → área<br>PD → punto de distribución<br>Unidades → qty solicitada<br>Total → monto OL</div>
         <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 SO Track</strong>PO Number → cruza con OC<br>Col L: Ordered Quantity<br>Col M: Ordered Amount<br>Col X: Delivered Quantity<br>Col Y: Delivered Amount<br>Col AB: Invoiced Quantity<br>Col AC: Invoiced Amount<br>Col AD: Gsuite (últimos 6)</div>
-        <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 Pronóstico</strong>Hoja: <em>data_logistica</em><br>O/C Cliente → OC<br>Col G: Status operativo<br>Col N: Fecha Entrega<br>Col W: Local/destino<br>CD Omnicanal = Ecommerce<br>Tiendas = Predistribuidas</div>
+        <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 Pronóstico</strong>Hoja: <em>data_logistica</em><br>O/C Cliente → OC<br>Col G: Status operativo<br>Col N: Fecha Entrega<br>Col R: Unidades Solicitadas (por sucursal)<br>Col W: Local/destino<br>CD Omnicanal = Ecommerce<br>Tiendas = Predistribuidas<br><em style="color:var(--cal-d)">Col R+W → detalle de unidades por sucursal (visible al exportar Excel en Predistribuidas)</em></div>
         <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 Quiebres (opcional)</strong>Cust. Ref. → cruza con OC<br>Material → SAP Code<br>Delivery Quantity → qty entregada<br>Quiebre → unidades en quiebre<br>% Caída = Quiebre ÷ Ordered Qty<br><br><em style="color:var(--cal-d)">Archivo independiente, no modificar OL</em></div>
       </div>
     </div>
@@ -420,6 +476,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 </div>
 
 <script>
+/*__PUMA_SNAPSHOT_DATA__*/
 'use strict';
 const TODAY   = new Date().toISOString().split('T')[0];
 const MESES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -453,12 +510,103 @@ function goPage(id){
 // ── FILE HANDLING ─────────────────────────────────────────
 function handleFile(inp,key){
   const f=inp.files[0]; if(!f)return;
+  setFile(key,f);
+}
+
+function setFile(key,f){
   S.files[key]=f;
   document.getElementById('card-'+key).classList.add('loaded');
   document.getElementById('nm-'+key).textContent=f.name;
   const loaded=Object.values(S.files).filter(Boolean).length;
   document.getElementById('btn-proc').disabled=loaded<2;
 }
+
+// ── AUTO-DETECCIÓN DE ARCHIVOS (Drag & Drop) ──────────────
+// Detecta a qué fuente corresponde cada archivo según su nombre
+// y, si es ambiguo, según las columnas de su primera hoja.
+async function detectFileType(file){
+  const name=file.name.toLowerCase();
+
+  // 1) Por nombre de archivo (heurística rápida)
+  if(/quiebr/.test(name)) return 'qb';
+  if(/(so.?track|sotrack|so_track)/.test(name)) return 'so';
+  if(/(pron[oó]stico|logist|data.?log)/.test(name)) return 'pr';
+  if(/(orden|liberad|^ol|_ol)/.test(name)) return 'ol';
+
+  // 2) Por contenido (leer encabezados de la primera fila)
+  try{
+    const rows=await readXL(file);
+    if(!rows.length) return null;
+    const keys=Object.keys(rows[0]).map(k=>k.toLowerCase());
+    const has=(...cands)=>cands.some(c=>keys.some(k=>k.includes(c)));
+
+    if(has('quiebre','cust. ref','cust ref')) return 'qb';
+    if(has('po number','gsuite','ordered quantity','invoiced quantity')) return 'so';
+    if(has('o/c cliente','status','local')) return 'pr';
+    if(has('num order','sap code','departamento')) return 'ol';
+  }catch{ /* ignore */ }
+
+  return null;
+}
+
+// ── DROPZONE (Drag & Drop) ─────────────────────────────────
+function initDropzone(){
+  const dz=document.getElementById('dropzone');
+  if(!dz)return;
+
+  ['dragenter','dragover'].forEach(evt=>{
+    dz.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('dragover');});
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dz.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();dz.classList.remove('dragover');});
+  });
+
+  dz.addEventListener('drop', async e=>{
+    const files=[...(e.dataTransfer?.files||[])].filter(f=>/\.(xlsx|xls)$/i.test(f.name));
+    if(!files.length)return;
+    await handleDroppedFiles(files);
+  });
+
+  // También permite click para abrir selector múltiple
+  dz.addEventListener('click', ()=>{
+    const inp=document.createElement('input');
+    inp.type='file'; inp.multiple=true; inp.accept='.xlsx,.xls';
+    inp.onchange=async e=>{
+      const files=[...e.target.files];
+      if(files.length) await handleDroppedFiles(files);
+    };
+    inp.click();
+  });
+}
+
+async function handleDroppedFiles(files){
+  const log=document.getElementById('proc-log');
+  log.style.display='block'; log.textContent=`🔎 Detectando ${files.length} archivo(s)...`;
+
+  const labels={ol:'Órdenes Liberadas',so:'SO Track',pr:'Pronóstico',qb:'Quiebres'};
+  const detected=[]; const unknown=[];
+
+  for(const f of files){
+    const key=await detectFileType(f);
+    if(key){ setFile(key,f); detected.push(`${labels[key]} → ${f.name}`); }
+    else unknown.push(f.name);
+  }
+
+  let msg = detected.length
+    ? `✅ Detectados:\n${detected.join('\n')}`
+    : '';
+  if(unknown.length) msg += `${msg?'\n':''}⚠️ No identificados: ${unknown.join(', ')}`;
+  log.textContent = msg || 'No se detectaron archivos válidos.';
+
+  // Si quedaron los 3 obligatorios + el dashboard ya tenía datos guardados,
+  // procesar automáticamente
+  const loaded=Object.values(S.files).filter(Boolean).length;
+  if(loaded>=3){
+    log.textContent += '\n⏳ Procesando automáticamente...';
+    setTimeout(processFiles, 400);
+  }
+}
+
 
 function readXL(file,sheet){
   return new Promise(res=>{
@@ -504,14 +652,25 @@ async function processFiles(){
   });
 
   // ── Data Logística por OC ──
+  // Detección flexible de la columna de unidades solicitadas (Col R)
+  const dlSample=dlData[0]||{};
+  const dlKeys=Object.keys(dlSample);
+  const findDLKey=(cands)=>dlKeys.find(k=>cands.some(c=>k.toLowerCase().includes(c.toLowerCase())))||null;
+  const kUnidLocal=findDLKey(['unidades solicitadas','unidad solicitada','cant solicitada','cantidad solicitada','unidades','cantidad','qty']);
+
   const dlMap={};
   dlData.forEach(r=>{
     const oc=String(r['O/C Cliente']||'').split('.')[0].trim(); if(!oc)return;
-    if(!dlMap[oc])dlMap[oc]={status:'',fecha:'',locales:new Set()};
+    if(!dlMap[oc])dlMap[oc]={status:'',fecha:'',locales:new Set(),locDetalle:[]};
     const d=dlMap[oc];
     d.status=d.status||(r['Status']||'');
     if(!d.fecha&&r['Fecha Entrega']){const dt=r['Fecha Entrega'] instanceof Date?r['Fecha Entrega']:new Date(r['Fecha Entrega']);if(!isNaN(dt))d.fecha=dt.toISOString().split('T')[0];}
-    const loc=String(r['Local']||'').trim(); if(loc)d.locales.add(loc);
+    const loc=String(r['Local']||'').trim();
+    if(loc){
+      d.locales.add(loc);
+      const unidLoc=kUnidLocal?(Number(r[kUnidLocal])||0):0;
+      d.locDetalle.push({local:loc,unidades:unidLoc});
+    }
   });
   Object.values(dlMap).forEach(d=>{
     const arr=[...d.locales];
@@ -539,7 +698,7 @@ async function processFiles(){
       dQ:so.dQ||0,dA:so.dA||0,iQ:so.iQ||0,iA:so.iA||0,
       Gs:[...(so.gs||[])].filter(Boolean).join(', '),
       FR1:fr1,FR2:fr2,Fecha:fd,
-      Status:dl.status||'—',Tipo:dl.tipo||'—',Locales:dl.locArr||[],
+      Status:dl.status||'—',Tipo:dl.tipo||'—',Locales:dl.locArr||[],LocDetalle:dl.locDetalle||[],
       EstAuto:estadoAuto,
     };
   });
@@ -584,6 +743,172 @@ async function processFiles(){
 
   buildKPIs(); buildCharts(); buildCalendar(); buildDeptos();
   goPage('dashboard');
+
+  // Guardar automáticamente en el navegador
+  saveToStorage();
+}
+
+// ── ALMACENAMIENTO LOCAL (localStorage) ───────────────────
+const LS_KEY='puma_dashboard_data_v1';
+
+function saveToStorage(){
+  try{
+    const payload={
+      rows:S.rows, qbRows:S.qbRows, overrides:S.overrides,
+      savedAt:new Date().toISOString(),
+      fileNames:{
+        ol:S.files.ol?.name||null, so:S.files.so?.name||null,
+        pr:S.files.pr?.name||null, qb:S.files.qb?.name||null,
+      }
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(payload));
+    updateSavedBar();
+  }catch(e){ console.warn('No se pudo guardar en localStorage', e); }
+}
+
+function loadFromStorage(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(!raw)return false;
+    const data=JSON.parse(raw);
+    if(!data.rows || !data.rows.length) return false;
+
+    S.rows=data.rows||[];
+    S.qbRows=data.qbRows||[];
+    S.overrides=data.overrides||{};
+
+    // Restaurar nombres de archivo en las tarjetas (visual)
+    const labels={ol:'nm-ol',so:'nm-so',pr:'nm-pr',qb:'nm-qb'};
+    Object.entries(data.fileNames||{}).forEach(([k,name])=>{
+      if(name){
+        document.getElementById('card-'+k)?.classList.add('loaded');
+        const el=document.getElementById(labels[k]); if(el)el.textContent=name+' (guardado)';
+      }
+    });
+
+    const cad=S.rows.filter(r=>r.Tipo==='Cadena').length;
+    const eco=S.rows.filter(r=>r.Tipo==='Ecommerce').length;
+    set('bdg-agenda',S.rows.length); set('bdg-cadena',cad); set('bdg-ecomm',eco);
+    set('bdg-qb',S.qbRows.length>0?S.qbRows.length:'0');
+
+    const saved=new Date(data.savedAt);
+    set('upd-chip','Cargado de memoria · '+saved.toLocaleDateString('es-CL')+' '+saved.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
+
+    buildKPIs(); buildCharts(); buildCalendar(); buildDeptos();
+    updateSavedBar();
+    return true;
+  }catch(e){ console.warn('No se pudo cargar desde localStorage', e); return false; }
+}
+
+function updateSavedBar(){
+  const bar=document.getElementById('saved-bar');
+  const sub=document.getElementById('saved-sub');
+  const shareBar=document.getElementById('share-bar');
+  if(!bar)return;
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    const hasData=S.rows && S.rows.length>0;
+    if(shareBar) shareBar.style.display = hasData ? 'flex' : 'none';
+    if(!raw){ bar.style.display='none'; return; }
+    const data=JSON.parse(raw);
+    const saved=new Date(data.savedAt);
+    sub.textContent=`${data.rows?.length||0} OC · ${data.qbRows?.length||0} quiebres · Guardado ${saved.toLocaleDateString('es-CL')} ${saved.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}`;
+    bar.style.display='flex';
+  }catch{ bar.style.display='none'; }
+}
+
+function clearSavedData(){
+  if(!confirm('¿Borrar los datos guardados localmente? Esto no afecta tus archivos Excel originales.'))return;
+  localStorage.removeItem(LS_KEY);
+  updateSavedBar();
+  showToastClear();
+}
+
+function showToastClear(){
+  const log=document.getElementById('proc-log');
+  if(log){ log.style.display='block'; log.textContent='🗑️ Datos guardados eliminados. Carga los archivos nuevamente.'; }
+}
+
+// ── EXPORTAR DASHBOARD COMPLETO (snapshot para compartir) ──
+function exportSnapshot(){
+  if(!S.rows.length){
+    alert('Primero carga y procesa los archivos para generar el dashboard.');
+    return;
+  }
+
+  const log=document.getElementById('proc-log');
+  log.style.display='block'; log.textContent='📦 Generando archivo para compartir...';
+
+  // Datos a embeber (mismo formato que localStorage)
+  const snapshot={
+    rows:S.rows, qbRows:S.qbRows, overrides:S.overrides,
+    savedAt:new Date().toISOString(),
+    fileNames:{
+      ol:S.files.ol?.name||null, so:S.files.so?.name||null,
+      pr:S.files.pr?.name||null, qb:S.files.qb?.name||null,
+    }
+  };
+
+  // Clonar el HTML actual completo
+  let html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+
+  // 1) Inyectar los datos como variable global ANTES del script principal
+  const dataScript=`<script>window.__PUMA_SNAPSHOT__=${JSON.stringify(snapshot)};window.__PUMA_SNAPSHOT_MODE__=true;</`+`script>\n`;
+  html=html.replace('<script>\n/*__PUMA_SNAPSHOT_DATA__*/', dataScript+'<script>\n/*__PUMA_SNAPSHOT_DATA__*/');
+
+  // 2) Reemplazar el bloque INIT para que use los datos embebidos en vez de localStorage/cargar archivos
+  const oldInit=`// ── INIT ──────────────────────────────────────────────────
+buildCalendar();
+initDropzone();
+const hadSaved = loadFromStorage();
+goPage('dashboard');
+if(!hadSaved){ updateSavedBar(); }`;
+
+  const newInit=`// ── INIT (MODO SNAPSHOT COMPARTIDO) ───────────────────────
+buildCalendar();
+if(window.__PUMA_SNAPSHOT_MODE__ && window.__PUMA_SNAPSHOT__){
+  const data=window.__PUMA_SNAPSHOT__;
+  S.rows=data.rows||[]; S.qbRows=data.qbRows||[]; S.overrides=data.overrides||{};
+  const cad=S.rows.filter(r=>r.Tipo==='Cadena').length;
+  const eco=S.rows.filter(r=>r.Tipo==='Ecommerce').length;
+  set('bdg-agenda',S.rows.length); set('bdg-cadena',cad); set('bdg-ecomm',eco);
+  set('bdg-qb',S.qbRows.length>0?S.qbRows.length:'0');
+  const saved=new Date(data.savedAt);
+  set('upd-chip','📦 Snapshot compartido · '+saved.toLocaleDateString('es-CL')+' '+saved.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
+  buildKPIs(); buildCharts(); buildCalendar(); buildDeptos();
+} else {
+  initDropzone();
+  const hadSaved = loadFromStorage();
+  if(!hadSaved){ updateSavedBar(); }
+}
+goPage('dashboard');`;
+
+  html=html.replace(oldInit, newInit);
+
+  // 3) Ocultar elementos de carga/edición que no aplican en modo compartido (visual, vía CSS)
+  const snapshotCSS=`<style>
+/* MODO SNAPSHOT: ocultar carga de archivos y acciones de edición */
+#nv-upload{display:none!important}
+.dz, .up-grid, .btn-proc, .saved-bar, .share-bar{display:none!important}
+.snapshot-banner{display:flex!important}
+</style>`;
+  html=html.replace('</head>', snapshotCSS+'\n</head>');
+
+  // 4) Agregar banner informativo de "vista compartida"
+  const banner=`<div class="snapshot-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:300;background:linear-gradient(135deg,var(--rose-dp),var(--cal-d));color:#fff;text-align:center;padding:6px 12px;font-size:11px;font-weight:600;letter-spacing:.3px">
+📦 Vista compartida — datos de ${new Date(snapshot.savedAt).toLocaleDateString('es-CL')} ${new Date(snapshot.savedAt).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})} · Solo lectura
+</div>`;
+  html=html.replace('<header class="topbar">', banner+'\n<header class="topbar" style="top:26px">');
+  html=html.replace('.sidebar{position:fixed;top:var(--tbh)', '.sidebar{position:fixed;top:calc(var(--tbh) + 26px)');
+  html=html.replace('.layout{margin-top:var(--tbh)', '.layout{margin-top:calc(var(--tbh) + 26px)');
+
+  // Descargar
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const now=new Date();
+  const stamp=now.toISOString().slice(0,10);
+  dl(blob, `dashboard_puma_${stamp}.html`);
+
+  log.textContent=`✅ Archivo generado: dashboard_puma_${stamp}.html — Súbelo a tu Teams/SharePoint interno para compartir con tu equipo.`;
 }
 
 // ── HELPERS ───────────────────────────────────────────────
@@ -787,7 +1112,7 @@ function renderRows(pid,rows,tot){
     </tr>`;
   }).join('');
 }
-function chgEst(oc,sel){S.overrides[oc]=sel.value;sel.className='est-sel '+(sel.value==='Mercadería recibida'?'rc':'pd');buildKPIs();}
+function chgEst(oc,sel){S.overrides[oc]=sel.value;sel.className='est-sel '+(sel.value==='Mercadería recibida'?'rc':'pd');buildKPIs();saveToStorage();}
 
 // ── QUIEBRES PAGE ─────────────────────────────────────────
 function renderQuiebres(){
@@ -971,13 +1296,37 @@ function buildDeptos(){
 function getSrc(pid){if(pid==='cadena')return S.rows.filter(r=>r.Tipo==='Cadena');if(pid==='ecomm')return S.rows.filter(r=>r.Tipo==='Ecommerce');return S.rows;}
 const HDR=['OC','Departamento','PD','Tipo','Fecha Despacho','Status','FR Liberado %','FR Facturado %','Monto Ingresado','Monto Liberado','Monto Facturado','N Factura','Estado'];
 function expCSV(pid){const src=getSrc(pid);if(!src.length)return;const rows=src.map(r=>[r.OC,r.Dep,r.PD,r.Tipo,r.Fecha,r.Status,r.FR1,r.FR2,r.oA,r.dA,r.iA,r.Gs,getEst(r)]);const csv=[HDR,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');dl(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),`puma_${pid}_${TODAY}.csv`);}
-function expXL(pid){const src=getSrc(pid);if(!src.length)return;const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'Tipo':r.Tipo,'Fecha':r.Fecha,'Status':r.Status,'FR Lib%':r.FR1,'FR Fact%':r.FR2,'Monto Ing':r.oA,'Monto Lib':r.dA,'Monto Fact':r.iA,'Factura':r.Gs,'Estado':getEst(r)}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Dashboard');XLSX.writeFile(wb,`puma_${pid}_${TODAY}.xlsx`);}
+function expXL(pid){
+  const src=getSrc(pid);if(!src.length)return;
+  const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'Tipo':r.Tipo,'Fecha':r.Fecha,'Status':r.Status,'FR Lib%':r.FR1,'FR Fact%':r.FR2,'Monto Ing':r.oA,'Monto Lib':r.dA,'Monto Fact':r.iA,'Factura':r.Gs,'Estado':getEst(r)}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Dashboard');
+
+  // Hoja adicional: detalle de unidades solicitadas por sucursal (solo Predistribuidas/Cadena)
+  if(pid==='cadena'){
+    const detalle=[];
+    src.forEach(r=>{
+      (r.LocDetalle||[]).forEach(l=>{
+        detalle.push({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'Sucursal':l.local,'Unidades Solicitadas':l.unidades});
+      });
+    });
+    if(detalle.length){
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detalle),'Detalle Sucursales');
+    }
+  }
+
+  XLSX.writeFile(wb,`puma_${pid}_${TODAY}.xlsx`);
+}
 function exportExcel(){expXL('all');}
 function expQBCSV(){if(!S.qbRows.length)return;const h=['OC','SAP Code','Producto','Departamento','PD','Cliente','Ordered Qty','Delivery Qty','Quiebre','% Caída'];const rows=S.qbRows.map(r=>[r.OC,r.SAP,r.SAPNm,r.Dep,r.PD,r.Cli,r.oQ,r.dQ,r.Quiebre,r.Caida]);const csv=[h,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');dl(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),`quiebres_${TODAY}.csv`);}
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}
 
 // ── INIT ──────────────────────────────────────────────────
 buildCalendar();
+initDropzone();
+const hadSaved = loadFromStorage();
 goPage('dashboard');
+if(!hadSaved){ updateSavedBar(); }
+
 </script>
 </html>
