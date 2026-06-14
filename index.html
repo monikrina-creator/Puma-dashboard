@@ -852,40 +852,13 @@ function exportSnapshot(){
   // Clonar el HTML actual completo
   let html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
 
-  // 1) Inyectar los datos como variable global ANTES del script principal
+  // 1) Inyectar los datos como variable global ANTES del script principal.
+  //    initApp() ya está preparado para detectar window.__PUMA_SNAPSHOT__
+  //    y usarlo automáticamente, sin necesidad de tocar el resto del código.
   const dataScript=`<script>window.__PUMA_SNAPSHOT__=${JSON.stringify(snapshot)};window.__PUMA_SNAPSHOT_MODE__=true;</`+`script>\n`;
   html=html.replace('<script>\n/*__PUMA_SNAPSHOT_DATA__*/', dataScript+'<script>\n/*__PUMA_SNAPSHOT_DATA__*/');
 
-  // 2) Reemplazar el bloque INIT para que use los datos embebidos en vez de localStorage/cargar archivos
-  const oldInit=`// ── INIT ──────────────────────────────────────────────────
-buildCalendar();
-initDropzone();
-const hadSaved = loadFromStorage();
-goPage('dashboard');
-if(!hadSaved){ updateSavedBar(); }`;
-
-  const newInit=`// ── INIT (MODO SNAPSHOT COMPARTIDO) ───────────────────────
-buildCalendar();
-if(window.__PUMA_SNAPSHOT_MODE__ && window.__PUMA_SNAPSHOT__){
-  const data=window.__PUMA_SNAPSHOT__;
-  S.rows=data.rows||[]; S.qbRows=data.qbRows||[]; S.overrides=data.overrides||{};
-  const cad=S.rows.filter(r=>r.Tipo==='Cadena').length;
-  const eco=S.rows.filter(r=>r.Tipo==='Ecommerce').length;
-  set('bdg-agenda',S.rows.length); set('bdg-cadena',cad); set('bdg-ecomm',eco);
-  set('bdg-qb',S.qbRows.length>0?S.qbRows.length:'0');
-  const saved=new Date(data.savedAt);
-  set('upd-chip','📦 Snapshot compartido · '+saved.toLocaleDateString('es-CL')+' '+saved.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
-  buildKPIs(); buildCharts(); buildCalendar(); buildDeptos();
-} else {
-  initDropzone();
-  const hadSaved = loadFromStorage();
-  if(!hadSaved){ updateSavedBar(); }
-}
-goPage('dashboard');`;
-
-  html=html.replace(oldInit, newInit);
-
-  // 3) Ocultar elementos de carga/edición que no aplican en modo compartido (visual, vía CSS)
+  // 2) Ocultar elementos de carga/edición que no aplican en modo compartido (visual, vía CSS)
   const snapshotCSS=`<style>
 /* MODO SNAPSHOT: ocultar carga de archivos y acciones de edición */
 #nv-upload{display:none!important}
@@ -894,7 +867,7 @@ goPage('dashboard');`;
 </style>`;
   html=html.replace('</head>', snapshotCSS+'\n</head>');
 
-  // 4) Agregar banner informativo de "vista compartida"
+  // 3) Agregar banner informativo de "vista compartida"
   const banner=`<div class="snapshot-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:300;background:linear-gradient(135deg,var(--rose-dp),var(--cal-d));color:#fff;text-align:center;padding:6px 12px;font-size:11px;font-weight:600;letter-spacing:.3px">
 📦 Vista compartida — datos de ${new Date(snapshot.savedAt).toLocaleDateString('es-CL')} ${new Date(snapshot.savedAt).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})} · Solo lectura
 </div>`;
@@ -1322,11 +1295,30 @@ function expQBCSV(){if(!S.qbRows.length)return;const h=['OC','SAP Code','Product
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}
 
 // ── INIT ──────────────────────────────────────────────────
-buildCalendar();
-initDropzone();
-const hadSaved = loadFromStorage();
-goPage('dashboard');
-if(!hadSaved){ updateSavedBar(); }
+function initApp(){
+  buildCalendar();
+
+  // Si el archivo fue exportado como "Dashboard Completo" (snapshot),
+  // window.__PUMA_SNAPSHOT__ existe y tiene prioridad sobre localStorage.
+  if(window.__PUMA_SNAPSHOT_MODE__ && window.__PUMA_SNAPSHOT__){
+    const data=window.__PUMA_SNAPSHOT__;
+    S.rows=data.rows||[]; S.qbRows=data.qbRows||[]; S.overrides=data.overrides||{};
+    const cad=S.rows.filter(r=>r.Tipo==='Cadena').length;
+    const eco=S.rows.filter(r=>r.Tipo==='Ecommerce').length;
+    set('bdg-agenda',S.rows.length); set('bdg-cadena',cad); set('bdg-ecomm',eco);
+    set('bdg-qb',S.qbRows.length>0?S.qbRows.length:'0');
+    const saved=new Date(data.savedAt);
+    set('upd-chip','📦 Snapshot compartido · '+saved.toLocaleDateString('es-CL')+' '+saved.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
+    buildKPIs(); buildCharts(); buildCalendar(); buildDeptos();
+  } else {
+    initDropzone();
+    const hadSaved = loadFromStorage();
+    if(!hadSaved){ updateSavedBar(); }
+  }
+
+  goPage('dashboard');
+}
+initApp();
 
 </script>
 </html>
