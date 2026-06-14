@@ -1055,7 +1055,7 @@ function renderTblPage(pid){
 function buildTblHTML(pid,title,cc,ic){
   const isTipo=pid==='agenda', isLoc=pid==='cadena';
   const extra1=isTipo?'<th>Tipo</th>':'', extra2=isLoc?'<th>Sucursales</th>':'';
-  const nc=14+(isTipo?1:0)+(isLoc?1:0);
+  const nc=15+(isTipo?1:0)+(isLoc?1:0);
   return`<div class="tbl-card">
     <div class="tbl-bar"><span class="tbl-title">${ic} ${title}</span><div class="tbl-acts"><span class="cnt-bdg ${cc}" id="cnt-${pid}">0</span></div></div>
     <div class="filt">
@@ -1069,7 +1069,7 @@ function buildTblHTML(pid,title,cc,ic){
     </div>
     <div class="tbl-wrap"><table class="mtbl"><thead><tr>
       <th>OC</th><th>Departamento</th><th>PD</th>${extra1}<th>Fecha despacho</th><th>Status</th>${extra2}
-      <th>Unid. Liberadas</th><th>Unid. Despachadas</th><th>FR Lib</th><th>FR Fact</th><th>Monto Ingresado</th><th>Monto Liberado</th><th>Monto Facturado</th><th>N° Factura</th><th>Estado</th>
+      <th>Unid. Ingreso</th><th>Unid. Liberadas</th><th>Unid. Despachadas</th><th>FR Lib</th><th>FR Fact</th><th>Monto Ingresado</th><th>Monto Liberado</th><th>Monto Facturado</th><th>N° Factura</th><th>Estado</th>
     </tr></thead><tbody id="tbody-${pid}"></tbody></table></div>
     <div class="tbl-foot"><span class="tbl-pg" id="pg-${pid}">—</span><div class="tbl-ex">
       <button class="btn-ex" onclick="expCSV('${pid}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
@@ -1116,7 +1116,7 @@ function clrFilter(pid){
 function renderRows(pid,rows,tot){
   const tb=document.getElementById('tbody-'+pid); if(!tb)return;
   const isTipo=pid==='agenda', isLoc=pid==='cadena';
-  const nc=14+(isTipo?1:0)+(isLoc?1:0);
+  const nc=15+(isTipo?1:0)+(isLoc?1:0);
   set('cnt-'+pid,rows.length+' registros');
   set('pg-'+pid,`Mostrando ${rows.length} de ${tot??rows.length} OC`);
   if(!rows.length){tb.innerHTML=`<tr><td colspan="${nc}"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-t">Sin resultados</div><div class="empty-s">Ajusta los filtros</div></div></td></tr>`;return;}
@@ -1134,6 +1134,7 @@ function renderRows(pid,rows,tot){
       <td>${fmtD(r.Fecha)}</td>
       <td>${stPill(r.Status)}</td>
       ${isLoc?`<td><div class="suc-wrap">${locs}${more}</div></td>`:''}
+      <td>${fmt(r.oQ)}</td>
       <td>${fmt(r.dQ)}</td>
       <td>${fmt(r.UnidDesp)}</td>
       <td><span class="fr ${frCls(r.FR1)}">${r.FR1}%</span></td>
@@ -1330,11 +1331,11 @@ function buildDeptos(){
 
 // ── EXPORTS ───────────────────────────────────────────────
 function getSrc(pid){if(pid==='cadena')return S.rows.filter(r=>r.Tipo==='Cadena');if(pid==='ecomm')return S.rows.filter(r=>r.Tipo==='Ecommerce');return S.rows;}
-const HDR=['OC','Departamento','PD','Tipo','Fecha Despacho','Status','Unid. Liberadas','Unid. Despachadas','FR Liberado %','FR Facturado %','Monto Ingresado','Monto Liberado','Monto Facturado','N Factura','Estado'];
-function expCSV(pid){const src=getSrc(pid);if(!src.length)return;const rows=src.map(r=>[r.OC,r.Dep,r.PD,r.Tipo,r.Fecha,r.Status,r.dQ,r.UnidDesp,r.FR1,r.FR2,r.oA,r.dA,r.iA,r.Gs,getEst(r)]);const csv=[HDR,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');dl(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),`puma_${pid}_${TODAY}.csv`);}
+const HDR=['OC','Departamento','PD','Tipo','Fecha Despacho','Status','Unid. Ingreso','Unid. Liberadas','Unid. Despachadas','FR Liberado %','FR Facturado %','Monto Ingresado','Monto Liberado','Monto Facturado','N Factura','Estado'];
+function expCSV(pid){const src=getSrc(pid);if(!src.length)return;const rows=src.map(r=>[r.OC,r.Dep,r.PD,r.Tipo,r.Fecha,r.Status,r.oQ,r.dQ,r.UnidDesp,r.FR1,r.FR2,r.oA,r.dA,r.iA,r.Gs,getEst(r)]);const csv=[HDR,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');dl(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),`puma_${pid}_${TODAY}.csv`);}
 function expXL(pid){
   const src=getSrc(pid);if(!src.length)return;
-  const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'Tipo':r.Tipo,'Fecha':r.Fecha,'Status':r.Status,'Unid. Liberadas':r.dQ,'Unid. Despachadas':r.UnidDesp,'FR Lib%':r.FR1,'FR Fact%':r.FR2,'Monto Ing':r.oA,'Monto Lib':r.dA,'Monto Fact':r.iA,'Factura':r.Gs,'Estado':getEst(r)}));
+  const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'Tipo':r.Tipo,'Fecha':r.Fecha,'Status':r.Status,'Unid. Ingreso':r.oQ,'Unid. Liberadas':r.dQ,'Unid. Despachadas':r.UnidDesp,'FR Lib%':r.FR1,'FR Fact%':r.FR2,'Monto Ing':r.oA,'Monto Lib':r.dA,'Monto Fact':r.iA,'Factura':r.Gs,'Estado':getEst(r)}));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Dashboard');
 
