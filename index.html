@@ -197,6 +197,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 .est-sel{font-size:10px;font-weight:700;border:none;border-radius:20px;padding:3px 9px;cursor:pointer;outline:none;font-family:var(--fn);appearance:none;-webkit-appearance:none}
 .est-sel.rc{background:var(--gr-l);color:var(--gr-d)}
 .est-sel.pd{background:var(--am-l);color:var(--am-d)}
+.est-sel.rp{background:var(--rd-l);color:var(--rd)}
 /* tipo badge */
 .tipo{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
 .tipo-c{background:var(--cal-l);color:var(--cal-d)}
@@ -411,6 +412,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">OC Recibidas</div><div class="kpi-v" id="k-recib">—</div><div class="kpi-tr up" id="tr-recib">● —</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal))"></div><div class="kpi-lbl">Predistribuidas</div><div class="kpi-v" id="k-cad">—</div><div class="kpi-sub">OC a tiendas</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rose-m),var(--rose-dp))"></div><div class="kpi-lbl">Ecommerce</div><div class="kpi-v" id="k-eco">—</div><div class="kpi-sub">OC CD Omnicanal</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rd),#A01010)"></div><div class="kpi-lbl">Rechazo Parcial</div><div class="kpi-v" id="k-rechazo">—</div><div class="kpi-tr dn" id="tr-rechazo">● —</div></div>
     </div>
     <div class="sec-lbl">Análisis operativo por departamento y estado</div>
     <div class="ch3">
@@ -890,6 +892,16 @@ function fmt(n){return Math.round(n).toLocaleString('es-CL');}
 function fmtM(n){return n>0?'$'+fmt(n):'—';}
 function fmtD(s){if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}
 function getEst(r){return S.overrides[r.OC]||r.EstAuto;}
+function estCls(est){
+  if(est==='Mercadería recibida')return'rc';
+  if(est==='Rechazo Parcial')return'rp';
+  return'pd';
+}
+function estLbl(est){
+  if(est==='Mercadería recibida')return'✅ Recibida';
+  if(est==='Rechazo Parcial')return'⚠️ Rechazo Parcial';
+  return'⏳ Pendiente';
+}
 function frCls(p){if(p===0)return'fr-zr';if(p>=80)return'fr-hi';if(p>=50)return'fr-md';return'fr-lo';}
 function qbCls(p){if(p===0)return'qb-lo';if(p<30)return'qb-md';return'qb-hi';}
 function stCls(s){return 's-'+(s||'').replace(/[\s&]/g,'_');}
@@ -904,14 +916,16 @@ function buildKPIs(){
   const fr1=tO>0?Math.round(tD/tO*100):0, fr2=tO>0?Math.round(tI/tO*100):0;
   const pend=R.filter(r=>getEst(r)==='Pendiente de despacho').length;
   const recib=R.filter(r=>getEst(r)==='Mercadería recibida').length;
+  const rechazo=R.filter(r=>getEst(r)==='Rechazo Parcial').length;
   const cad=R.filter(r=>r.Tipo==='Cadena').length, eco=R.filter(r=>r.Tipo==='Ecommerce').length;
   set('k-oc',n); set('k-fr1',fr1+'%'); set('k-fr2',fr2+'%');
   set('k-ming',fmtM(R.reduce((a,r)=>a+r.oA,0)));
   set('k-mlib',fmtM(R.reduce((a,r)=>a+r.dA,0)));
   set('k-mfact',fmtM(R.reduce((a,r)=>a+r.iA,0)));
-  set('k-pend',pend); set('k-recib',recib); set('k-cad',cad); set('k-eco',eco);
+  set('k-pend',pend); set('k-recib',recib); set('k-cad',cad); set('k-eco',eco); set('k-rechazo',rechazo);
   set('tr-pend',`● ${n>0?Math.round(pend/n*100):0}% del total`);
   set('tr-recib',`● ${n>0?Math.round(recib/n*100):0}% del total`);
+  set('tr-rechazo',`● ${n>0?Math.round(rechazo/n*100):0}% del total`);
   gauge('g1',fr1); gauge('g2',fr2);
 }
 
@@ -1005,7 +1019,7 @@ function buildTblHTML(pid,title,cc,ic){
       <span class="f-lbl">PD</span><select class="f-sel" id="fpd-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option></select>
       <span class="f-lbl">Fecha</span><select class="f-sel" id="ffe-${pid}" onchange="doFilter('${pid}')"><option value="">Todas</option></select>
       <span class="f-lbl">Status</span><select class="f-sel" id="fst-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>DESPACHADO</option><option>EN PICKING</option><option>VAS &amp; DISTRO</option><option>PRE-DESPACHO</option><option>PRE-DISTRO</option></select>
-      <span class="f-lbl">Estado</span><select class="f-sel" id="fes-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>Mercadería recibida</option><option>Pendiente de despacho</option></select>
+      <span class="f-lbl">Estado</span><select class="f-sel" id="fes-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>Mercadería recibida</option><option>Pendiente de despacho</option><option>Rechazo Parcial</option></select>
       <button class="btn-clr" onclick="clrFilter('${pid}')">✕ Limpiar</button>
     </div>
     <div class="tbl-wrap"><table class="mtbl"><thead><tr>
@@ -1061,8 +1075,9 @@ function renderRows(pid,rows,tot){
   set('cnt-'+pid,rows.length+' registros');
   set('pg-'+pid,`Mostrando ${rows.length} de ${tot??rows.length} OC`);
   if(!rows.length){tb.innerHTML=`<tr><td colspan="${nc}"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-t">Sin resultados</div><div class="empty-s">Ajusta los filtros</div></div></td></tr>`;return;}
+
   tb.innerHTML=rows.map(r=>{
-    const est=getEst(r),eCls=est==='Mercadería recibida'?'rc':'pd';
+    const est=getEst(r),eCls=estCls(est);
     const tipo=r.Tipo==='Ecommerce'?'<span class="tipo tipo-e">📦 Ecomm</span>':'<span class="tipo tipo-c">🚚 Cadena</span>';
     const locs=r.Locales.slice(0,3).map(l=>`<span class="suc">${l}</span>`).join('');
     const more=r.Locales.length>3?`<span class="suc">+${r.Locales.length-3}</span>`:'';
@@ -1081,11 +1096,12 @@ function renderRows(pid,rows,tot){
       <td><select class="est-sel ${eCls}" onchange="chgEst('${r.OC}',this)">
         <option value="Pendiente de despacho" ${est==='Pendiente de despacho'?'selected':''}>⏳ Pendiente</option>
         <option value="Mercadería recibida"   ${est==='Mercadería recibida'?'selected':''}>✅ Recibida</option>
+        <option value="Rechazo Parcial"       ${est==='Rechazo Parcial'?'selected':''}>⚠️ Rechazo Parcial</option>
       </select></td>
     </tr>`;
   }).join('');
 }
-function chgEst(oc,sel){S.overrides[oc]=sel.value;sel.className='est-sel '+(sel.value==='Mercadería recibida'?'rc':'pd');buildKPIs();saveToStorage();}
+function chgEst(oc,sel){S.overrides[oc]=sel.value;sel.className='est-sel '+estCls(sel.value);buildKPIs();saveToStorage();}
 
 // ── QUIEBRES PAGE ─────────────────────────────────────────
 function renderQuiebres(){
