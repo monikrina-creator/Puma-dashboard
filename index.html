@@ -656,7 +656,7 @@ async function processFiles(){
   const dlSample=dlData[0]||{};
   const dlKeys=Object.keys(dlSample);
   const findDLKey=(cands)=>dlKeys.find(k=>cands.some(c=>k.toLowerCase().includes(c.toLowerCase())))||null;
-  const kUnidLocal=findDLKey(['unidades solicitadas','unidad solicitada','cant solicitada','cantidad solicitada','unidades','cantidad','qty']);
+  const kUnidLocal=findDLKey(['unid_solic','unid solic','unidades solicitadas','unidad solicitada','cant solicitada','cantidad solicitada','unidades','cantidad','qty']);
 
   const dlMap={};
   dlData.forEach(r=>{
