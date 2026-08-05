@@ -116,13 +116,13 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 .cli-chip-n{font-size:13px;font-weight:700;color:var(--tx);margin-top:1px}
 
 /* ── LAYOUT ── */
-.layout{margin-top:var(--tbh);margin-left:var(--sbw);min-height:calc(100vh - var(--tbh));height:calc(100vh - var(--tbh));display:flex;flex-direction:column;overflow-y:auto}
-.page{display:none;flex-direction:column;min-height:calc(100vh - var(--tbh));width:100%}
-.page.active{display:flex;flex:1}
+.layout{position:fixed;top:var(--tbh);left:var(--sbw);right:0;bottom:0;overflow-y:auto;background:var(--bg)}
+.page{display:none}
+.page.active{display:block;min-height:100%}
 .pg-hdr{padding:22px 28px 0;display:flex;align-items:flex-start;justify-content:space-between}
 .pg-title{font-size:20px;font-weight:800;color:var(--tx);letter-spacing:-.4px}
 .pg-sub{font-size:12px;color:var(--tx3);margin-top:2px;font-weight:500}
-.pg-body{padding:18px 28px 28px;flex:1;min-height:0;display:block}
+.pg-body{padding:18px 28px 28px}
 
 /* ── UPLOAD ── */
 .up-panel{background:var(--wh);border:1px solid var(--bd);border-radius:var(--r16);padding:22px 24px;margin-bottom:20px;box-shadow:var(--s2)}
@@ -533,6 +533,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
         <button class="btn-share" onclick="exportSnapshot()">📦 Exportar Dashboard Completo</button>
       </div>
     </div>
+</div><!-- /page-upload -->
 
 
 <!-- ══ DASHBOARD ══ -->
@@ -768,7 +769,16 @@ function goPage(id){
 // ── FILE HANDLING ─────────────────────────────────────────
 function handleFile(inp,key){
   const f=inp.files[0]; if(!f)return;
-  setFile(key,f);
+  // Auto-detectar tipo de archivo — ignora la tarjeta donde se subió
+  detectFileType(f).then(detectedKey=>{
+    const finalKey = detectedKey || key;
+    if(detectedKey && detectedKey !== key){
+      // Reasignar al slot correcto
+      const keyNames = {ol:'DATA_GOWH / OL',so:'SO Track',pr:'DATA_OL / Pronóstico',qb:'B2B / Quiebres'};
+      console.log('Auto-reasignado: '+f.name+' → '+keyNames[finalKey]);
+    }
+    setFile(finalKey, f);
+  });
 }
 
 function setFile(key,f){
@@ -786,10 +796,12 @@ async function detectFileType(file){
   const name=file.name.toLowerCase();
 
   // 1) Por nombre de archivo (heurística rápida)
-  if(/quiebr/.test(name)) return 'qb';
+  if(/quiebr|b2b/.test(name)) return 'qb';
   if(/(so.?track|sotrack|so_track)/.test(name)) return 'so';
+  if(/(data.?ol|_ol|data_ol)/.test(name)) return 'pr';
+  if(/(gowh|data.?gowh)/.test(name)) return 'ol';
   if(/(pron[oó]stico|logist|data.?log)/.test(name)) return 'pr';
-  if(/(orden|liberad|^ol|_ol)/.test(name)) return 'ol';
+  if(/(orden|liberad|^ol[._])/.test(name)) return 'ol';
 
   // 2) Por contenido (leer encabezados de la primera fila)
   try{
@@ -799,9 +811,15 @@ async function detectFileType(file){
     const has=(...cands)=>cands.some(c=>keys.some(k=>k.includes(c)));
 
     if(has('quiebre','cust. ref','cust ref')) return 'qb';
+    // B2B Falabella: tiene OC + HORA + FECHA ENTREGA + DELIVERY
+    if(has('hora') && has('delivery') && (has('fecha entrega') || has('oc'))) return 'qb';
     if(has('po number','gsuite','ordered quantity','invoiced quantity')) return 'so';
-    if(has('o/c cliente','status','local')) return 'pr';
+    if(has('o/c cliente') && has('local') && has('unid_solic')) return 'pr';
+    // GOWH Falabella: tiene Num Order + Total + Departamento
+    if(has('num order') && has('departamento') && has('total')) return 'ol';
     if(has('num order','sap code','departamento')) return 'ol';
+    // DATA_OL sin Unid_Solic: detectar por O/C Cliente
+    if(has('o/c cliente','status','local')) return 'pr';
   }catch{ /* ignore */ }
 
   return null;
@@ -1023,8 +1041,11 @@ async function processFiles(){
     const res=resMap[oc]||{};   // FALA_RESUMEN fallback
     const b2b=b2bMap[oc]||{};  // DATA_B2B fallback
 
-    const fr1=so.oQ>0?Math.round(so.dQ/so.oQ*100):0;
-    const fr2=so.oQ>0?Math.round(so.iQ/so.oQ*100):0;
+    // FR se calcula vs GOWH unidades (fuente limpia)
+    // Si no hay GOWH, usar SO como fallback
+    const baseQ = ol.saps.reduce((a,s)=>a+s.uQ,0) || so.oQ || 0;
+    const fr1=baseQ>0?Math.round(so.dQ/baseQ*100):0;
+    const fr2=baseQ>0?Math.round(so.iQ/baseQ*100):0;
 
     // Fecha: DATA_OL → B2B → FALA_RESUMEN
     const fd=dl.fecha||b2b.fecha||'';
@@ -1035,17 +1056,30 @@ async function processFiles(){
     // Estado: FALA_RESUMEN → auto por fecha
     const estadoAuto=(!fd||fd>TODAY)?'Pendiente de despacho':'Mercadería recibida';
 
-    const totalOA=ol.saps.reduce((a,s)=>a+s.total,0);
+    // oQ y oA: GOWH es la fuente primaria (Unidades y Total)
+    // SOTRACK Ordered Qty/Amt se usa solo si GOWH no tiene dato
+    const gowhUQ = ol.saps.reduce((a,s)=>a+s.uQ,0);
+    const gowhOA = ol.saps.reduce((a,s)=>a+s.total,0);
+    const finalOQ = gowhUQ || so.oQ || 0;
+    const finalOA = gowhOA || so.oA || 0;
+
+    // Alerta: SOTRACK Ordered > GOWH (indica saldos / datos sucios)
+    const alertaOQ = so.oQ>0 && gowhUQ>0 && so.oQ > gowhUQ;
+    const alertaOA = so.oA>0 && gowhOA>0 && so.oA > gowhOA;
+
     return{OC:oc,Dep:ol.dep,PD:ol.pd,Cli:ol.cli||so.soldTo||(isFala?'FALABELLA':'PARIS'),
-      oQ:so.oQ||ol.saps.reduce((a,s)=>a+s.uQ,0),
-      oA:totalOA,
-      dQ:so.dQ||0,dA:Math.min(so.dA||0,totalOA),
-      iQ:so.iQ||0,iA:Math.min(so.iA||0,totalOA),
+      oQ:finalOQ,
+      oA:finalOA,
+      dQ:so.dQ||0,dA:Math.min(so.dA||0,finalOA),
+      iQ:so.iQ||0,iA:Math.min(so.iA||0,finalOA),
       Gs:b2b.factura||[...(so.gs||[])].filter(Boolean).join(', '),
       FR1:fr1,FR2:fr2,Fecha:fd,Hora:b2b.hora||'',
       Status:status,Tipo:tipo,Locales:dl.locArr||[],LocDetalle:dl.locDetalle||[],
       UnidDesp:dl.unidDespacho||0,
       EstAuto:estadoAuto,
+      // Alertas de saldo: SO > GOWH
+      AlertaQty: alertaOQ, AlertaAmt: alertaOA,
+      soOQ: so.oQ||0, soOA: so.oA||0,
     };
   });
 
@@ -1476,7 +1510,7 @@ function renderRows(pid,rows,tot){
     const locs=r.Locales.slice(0,3).map(l=>`<span class="suc">${l}</span>`).join('');
     const more=r.Locales.length>3?`<span class="suc">+${r.Locales.length-3}</span>`:'';
     return`<tr>
-      <td><strong>${r.OC}</strong></td>
+      <td><strong>${r.OC}</strong>${r.AlertaQty||r.AlertaAmt?'<span title="SO Track Ordered > GOWH — posible saldo en datos" style="margin-left:4px;font-size:9px;background:#FEF3DC;color:#8A5A00;border:1px solid #F5A623;border-radius:6px;padding:1px 5px;cursor:help">⚠️ Saldo</span>':''}</td>
       <td><span class="pill p-cal">${r.Dep}</span></td>
       <td>${r.PD}</td>
       ${isTipo?`<td>${tipo}</td>`:''}
