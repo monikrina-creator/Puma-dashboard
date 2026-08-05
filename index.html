@@ -116,13 +116,13 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 .cli-chip-n{font-size:13px;font-weight:700;color:var(--tx);margin-top:1px}
 
 /* ── LAYOUT ── */
-.layout{margin-top:var(--tbh);margin-left:var(--sbw);min-height:calc(100vh - var(--tbh))}
-.page{display:none;flex-direction:column;min-height:calc(100vh - var(--tbh))}
-.page.active{display:flex}
+.layout{margin-top:var(--tbh);margin-left:var(--sbw);min-height:calc(100vh - var(--tbh));height:calc(100vh - var(--tbh));display:flex;flex-direction:column;overflow-y:auto}
+.page{display:none;flex-direction:column;min-height:calc(100vh - var(--tbh));width:100%}
+.page.active{display:flex;flex:1}
 .pg-hdr{padding:22px 28px 0;display:flex;align-items:flex-start;justify-content:space-between}
 .pg-title{font-size:20px;font-weight:800;color:var(--tx);letter-spacing:-.4px}
 .pg-sub{font-size:12px;color:var(--tx3);margin-top:2px;font-weight:500}
-.pg-body{padding:18px 28px 28px;flex:1}
+.pg-body{padding:18px 28px 28px;flex:1;min-height:0;display:block}
 
 /* ── UPLOAD ── */
 .up-panel{background:var(--wh);border:1px solid var(--bd);border-radius:var(--r16);padding:22px 24px;margin-bottom:20px;box-shadow:var(--s2)}
@@ -509,9 +509,8 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
     <div id="upload-guide" style="background:var(--wh);border:1px solid var(--bd);border-radius:var(--r12);padding:18px 22px;box-shadow:var(--s2);margin-top:16px">
       <!-- Guide rendered dynamically by renderUploadPanel() -->
     </div>
-
-      <!-- ESTADO DE DATOS GUARDADOS -->
-      <div class="saved-bar" id="saved-bar" style="display:none">
+    <!-- ESTADO DE DATOS GUARDADOS -->
+    <div class="saved-bar" id="saved-bar" style="display:none">
         <div class="saved-info">
           <span class="saved-ico">💾</span>
           <div>
@@ -522,8 +521,8 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
         <button class="btn-clr" onclick="clearSavedData()">🗑️ Borrar datos guardados</button>
       </div>
 
-      <!-- COMPARTIR DASHBOARD CON DATOS -->
-      <div class="share-bar" id="share-bar" style="display:none">
+    <!-- COMPARTIR DASHBOARD CON DATOS -->
+    <div class="share-bar" id="share-bar" style="display:none">
         <div class="share-info">
           <span class="saved-ico">📦</span>
           <div>
@@ -534,20 +533,10 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
         <button class="btn-share" onclick="exportSnapshot()">📦 Exportar Dashboard Completo</button>
       </div>
     </div>
-    <div style="background:var(--wh);border:1px solid var(--bd);border-radius:var(--r12);padding:18px 22px;box-shadow:var(--s2)">
-      <div class="sec-lbl" style="margin-bottom:10px">Guía de columnas por archivo</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;font-size:11px;color:var(--tx3)">
-        <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 Órdenes Liberadas</strong>Num Order → OC<br>SAP Code → código producto<br>Departamento → área<br>PD → punto de distribución<br>Unidades → qty solicitada<br>Total (Col U) → Monto Ingresado</div>
-        <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 SO Track</strong>PO Number → cruza con OC<br>Col L: Ordered Quantity<br>Col M: Ordered Amount<br>Col X: Delivered Quantity<br>Col Y: Delivered Amount<br>Col AB: Invoiced Quantity<br>Col AC: Invoiced Amount<br>Col AD: Gsuite (últimos 6)</div>
-        <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 Pronóstico</strong>Hoja: <em>data_logistica</em><br>O/C Cliente → OC<br>Col G: Status operativo<br>Col N: Fecha Entrega<br>Col R: Unidades Solicitadas (por sucursal)<br>Col W: Local/destino<br>CD Omnicanal = Ecommerce<br>Tiendas = Predistribuidas<br><em style="color:var(--cal-d)">Col R+W → detalle de unidades por sucursal (visible al exportar Excel en Predistribuidas)</em></div>
-        <div><strong style="color:var(--tx2);display:block;margin-bottom:6px">📄 Quiebres (opcional)</strong>Cust. Ref. → cruza con OC<br>Material → SAP Code<br>Delivery Quantity → qty entregada<br>Quiebre → unidades en quiebre<br>% Caída = Quiebre ÷ Ordered Qty<br><br><em style="color:var(--cal-d)">Archivo independiente, no modificar OL</em></div>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <!-- ══ DASHBOARD ══ -->
-<div class="page active" id="page-dashboard">
+<div class="page" id="page-dashboard">
   <div class="pg-hdr"><div><div class="pg-title">📊 Dashboard Ejecutivo</div><div class="pg-sub">KPIs · Gráficos · Fill Rate · <span id="dash-sub-client">Falabella</span></div></div><div style="padding-top:4px"><button class="btn-ex" onclick="exportExcel('all')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Exportar</button></div></div>
   <div class="pg-body">
     <!-- KPI ROW 1 -->
@@ -1146,8 +1135,9 @@ async function processFiles(){
   const now=new Date();
   set('upd-chip','Actualizado '+now.toLocaleDateString('es-CL')+' '+now.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
 
-  buildKPIs(); buildCharts(); buildCalendar(); buildDeptos();
+  buildKPIs(); buildCalendar(); buildDeptos();
   goPage('dashboard');
+  setTimeout(buildCharts, 80); // charts need visible DOM to render
 
   // Guardar automáticamente en el navegador
   saveToStorage();
