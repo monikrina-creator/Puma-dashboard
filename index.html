@@ -332,6 +332,55 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 
 @media(max-width:1100px){:root{--sbw:200px}.kr5{grid-template-columns:repeat(3,1fr)}.ch3{grid-template-columns:1fr 1fr}.ch2-3{grid-template-columns:1fr 1fr}}
 @media(max-width:800px){:root{--sbw:0px}.sidebar{display:none}.up-grid{grid-template-columns:1fr 1fr}.ch2,.ch3,.ch2-3,.dep-grid{grid-template-columns:1fr}.kr5{grid-template-columns:repeat(2,1fr)}}
+/* ── WELCOME SCREEN ── */
+.welcome-overlay{position:fixed;inset:0;background:linear-gradient(150deg,#EBF8F8 0%,#F4F8F9 45%,#FDE8EF 100%);z-index:9999;display:flex;align-items:center;justify-content:center}
+.welcome-card{background:var(--wh);border-radius:24px;box-shadow:0 20px 60px rgba(12,45,53,.13);padding:40px 48px 32px;max-width:580px;width:92%;text-align:center;position:relative;overflow:hidden}
+.welcome-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--cal),var(--cal-d) 50%,var(--rose-dp))}
+
+/* Brand strip */
+.wc-brand{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px}
+.wc-cat-left,.wc-cat-right{flex-shrink:0;opacity:.85}
+.wc-shoe{filter:drop-shadow(0 3px 6px rgba(39,191,191,.25))}
+.wc-shirt{filter:drop-shadow(0 3px 6px rgba(217,100,136,.25))}
+.wc-logo-center{display:flex;flex-direction:column;align-items:center;gap:4px}
+.wc-puma-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--cal),var(--cal-d));display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(39,191,191,.35)}
+.wc-brand-text{display:flex;flex-direction:column;align-items:center}
+.wc-brand-puma{font-size:11px;font-weight:800;color:var(--cal-d);letter-spacing:.5px;text-transform:uppercase}
+.wc-brand-dash{font-size:9px;font-weight:600;color:var(--tx3);letter-spacing:.3px}
+
+/* Title */
+.wc-title{font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.4px;margin-bottom:4px}
+.wc-sub{font-size:12px;color:var(--tx3);margin-bottom:24px;font-weight:500}
+
+/* Divider question */
+.wc-divider{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.wc-divider::before,.wc-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--bd))}
+.wc-divider::after{background:linear-gradient(90deg,var(--bd),transparent)}
+.wc-divider span{font-size:11px;font-weight:700;color:var(--tx3);white-space:nowrap;text-transform:uppercase;letter-spacing:.5px}
+
+/* Client buttons */
+.client-btns{display:flex;gap:14px;justify-content:center;margin-bottom:24px}
+.client-btn{flex:1;padding:18px 14px 16px;border-radius:var(--r16);border:2px solid var(--bd);background:var(--bg);cursor:pointer;transition:all .2s;font-family:var(--fn);display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;overflow:hidden}
+.client-btn::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s}
+.client-btn.fala:hover{border-color:var(--cal);background:var(--cal-l);transform:translateY(-4px);box-shadow:0 12px 32px rgba(39,191,191,.22)}
+.client-btn.paris:hover{border-color:var(--rose-dp);background:var(--rose-l);transform:translateY(-4px);box-shadow:0 12px 32px rgba(217,100,136,.22)}
+.cb-icon-wrap{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.fala-icon{background:linear-gradient(135deg,var(--cal-l),#C5EEEE)}
+.paris-icon{background:linear-gradient(135deg,var(--rose-l),#F9C0D4)}
+.client-btn-name{font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.3px}
+.client-btn-sub{font-size:10px;color:var(--tx3);font-weight:600;letter-spacing:.2px}
+.cb-kpi-preview{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:2px}
+.cb-kpi{font-size:9px;font-weight:600;padding:2px 7px;border-radius:8px;background:var(--wh);color:var(--tx3);border:1px solid var(--bd)}
+
+/* Footer */
+.wc-footer{font-size:10px;color:var(--tx4);font-weight:500;letter-spacing:.2px}
+
+/* Client badge in topbar */
+.client-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s}
+.client-badge.fala{background:var(--cal-l);color:var(--cal-d);border-color:var(--cal-m)}
+.client-badge.paris{background:var(--rose-l);color:var(--rose-d);border-color:var(--rose-m)}
+.client-badge svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
 </style>
 
 <!--PUMA_HEAD_END_MARKER-->
@@ -381,22 +430,56 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 <!-- ══ WELCOME SCREEN ══ -->
 <div class="welcome-overlay" id="welcome-overlay">
   <div class="welcome-card">
-    <div class="welcome-logo"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-    <div class="welcome-title">PUMA Chile · Dashboard Logístico</div>
-    <div class="welcome-sub">Seguimiento de Órdenes de Compra en tiempo real</div>
-    <div class="welcome-q">¿Qué cliente quieres revisar hoy?</div>
+
+    <!-- Brand header -->
+    <div class="wc-brand">
+      <div class="wc-logo-center">
+        <div class="wc-puma-icon">
+          <!-- House/logistics icon -->
+          <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 11 L14 3 L25 11 L25 25 L17 25 L17 17 L11 17 L11 25 L3 25 Z"/>
+          </svg>
+        </div>
+        <div class="wc-brand-text">
+          <span class="wc-brand-puma">PUMA Chile</span>
+          <span class="wc-brand-dash">Dashboard Logístico</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="wc-title">PUMA Chile · Dashboard Logístico</div>
+    <div class="wc-sub">Seguimiento de Órdenes de Compra en tiempo real</div>
+
+    <div class="wc-divider"><span>¿Qué cliente revisas hoy?</span></div>
+
     <div class="client-btns">
       <button class="client-btn fala" onclick="selectClient('FALABELLA')">
-        <span class="client-btn-icon">🏬</span>
+        <div class="cb-icon-wrap fala-icon">
+          <span style="font-size:36px;line-height:1">👟</span>
+        </div>
         <span class="client-btn-name">Falabella</span>
-        <span class="client-btn-sub">GOWH · B2B · SOTRACK · OL</span>
+        <span class="client-btn-sub">GOWH · SOTRACK · OL · B2B</span>
+        <div class="cb-kpi-preview">
+          <span class="cb-kpi">📦 OC</span>
+          <span class="cb-kpi">📊 Fill Rate</span>
+          <span class="cb-kpi">👟 Tiendas</span>
+        </div>
       </button>
       <button class="client-btn paris" onclick="selectClient('PARIS')">
-        <span class="client-btn-icon">🛍️</span>
+        <div class="cb-icon-wrap paris-icon">
+          <span style="font-size:36px;line-height:1">👗</span>
+        </div>
         <span class="client-btn-name">Cencosud París</span>
         <span class="client-btn-sub">OL · SOTRACK · Pronóstico</span>
+        <div class="cb-kpi-preview">
+          <span class="cb-kpi">📦 OC</span>
+          <span class="cb-kpi">📊 Fill Rate</span>
+          <span class="cb-kpi">👗 Cadena</span>
+        </div>
       </button>
     </div>
+
+    <div class="wc-footer">PUMA Chile · Logística &amp; Supply Chain · <span id="wc-fecha"></span></div>
   </div>
 </div>
 
@@ -1767,6 +1850,9 @@ function dl(blob,name){const a=document.createElement('a');a.href=URL.createObje
 function initApp(){
   buildCalendar();
   renderUploadPanel();
+  // Set date in welcome footer
+  const wf=document.getElementById('wc-fecha');
+  if(wf) wf.textContent=new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   // Si el archivo fue exportado como "Dashboard Completo" (snapshot),
   // window.__PUMA_SNAPSHOT__ existe y tiene prioridad sobre localStorage.
