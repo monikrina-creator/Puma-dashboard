@@ -707,6 +707,15 @@ function selectClient(c){
   S.rows=[];S.qbRows=[];S.qbCodRows=[];S.overrides={};
   // Render upload panel for this client
   renderUploadPanel();
+  // Actualizar TODOS los labels al cambiar cliente
+  const _chip=document.getElementById('cli-chip-nm');
+  if(_chip)_chip.textContent=c==='FALABELLA'?'Falabella':'Cencosud París';
+  const _dashSub=document.getElementById('dash-sub-client');
+  if(_dashSub)_dashSub.textContent=c==='FALABELLA'?'Falabella':'Cencosud París';
+  const _lblCad=document.getElementById('lbl-cadena');
+  if(_lblCad)_lblCad.textContent=c==='FALABELLA'?'Tiendas':'Predistribuidas';
+  const _nvqb=document.getElementById('nv-quiebres');
+  if(_nvqb)_nvqb.style.display=c==='PARIS'?'':'none';
   // Navigate to upload
   goPage('upload');
 }
@@ -807,7 +816,8 @@ function renderUploadPanel(){
 const S = {
   files:{ol:null,so:null,pr:null,qb:null,b2b:null},
   rows:[],        // OC consolidadas
-  qbRows:[],      // filas de quiebres consolidadas (formato antiguo: Cust.Ref)
+  qbRows:[],      // filas de quiebres consolidadas
+  qbParisRows:[], // nuevo formato quiebres Paris (Solicitado/Recibido) (formato antiguo: Cust.Ref)
   qbCodRows:[],   // filas de quiebres por código (formato nuevo: Cod.Prov./Pendiente/A Despachar/Recep.)
   overrides:{},
   charts:{},
@@ -1158,7 +1168,42 @@ async function processFiles(){
   // ── Quiebres ──
   S.qbRows=[];
   S.qbCodRows=[];
+  S.qbParisRows=[];
   if(qbData.length>0){
+    // ── Detectar formato París (N° Orden · Solicitado · Recibido) ──
+    const _qbSample=qbData[0]||{};
+    const _qbKeys=Object.keys(_qbSample).map(k=>k.toLowerCase());
+    const _isParisQB=_qbKeys.some(k=>k.includes('solicitado'))&&_qbKeys.some(k=>k.includes('recibido'))&&_qbKeys.some(k=>k.includes('orden'));
+    if(_isParisQB){
+      const kOC=Object.keys(_qbSample).find(k=>k.toLowerCase().includes('orden'))||'N° Orden';
+      const kDep=Object.keys(_qbSample).find(k=>k.toLowerCase()==='departamento')||'Departamento';
+      const kLD=Object.keys(_qbSample).find(k=>k.toLowerCase().includes('local destino'))||'Local Destino';
+      const kLE=Object.keys(_qbSample).find(k=>k.toLowerCase().includes('local entrega'))||'Local Entrega';
+      const kCod=Object.keys(_qbSample).find(k=>k.toLowerCase().includes('prod. prov')||k.toLowerCase().includes('cód. prod'))||'Cód. Prod. Prov.';
+      const kDesc=Object.keys(_qbSample).find(k=>['descripción','descripcion'].includes(k.toLowerCase()))||'Descripción';
+      const kSol=Object.keys(_qbSample).find(k=>k.toLowerCase()==='solicitado')||'Solicitado';
+      const kRec=Object.keys(_qbSample).find(k=>k.toLowerCase()==='recibido')||'Recibido';
+      const kEst=Object.keys(_qbSample).find(k=>k.toLowerCase()==='estado')||'Estado';
+      qbData.forEach(r=>{
+        const oc=String(r[kOC]||'').split('.')[0].trim(); if(!oc)return;
+        const sol=Number(r[kSol])||0; if(!sol)return;
+        const rec=Number(r[kRec])||0;
+        const qb=Math.max(sol-rec,0);
+        const localE=String(r[kLE]||'').toUpperCase();
+        S.qbParisRows.push({
+          OC:oc, Dep:String(r[kDep]||'—'),
+          LocalD:String(r[kLD]||'—'), LocalE:String(r[kLE]||'—'),
+          Canal:localE.includes('OMNI')?'Ecommerce':'Cadena',
+          Cod:String(r[kCod]||''), Desc:String(r[kDesc]||''),
+          Sol:sol, Rec:rec, Quiebre:qb,
+          Estado:String(r[kEst]||''),
+          FR:sol>0?Math.round(rec/sol*100):0
+        });
+      });
+      set('bdg-qb',S.qbParisRows.filter(r=>r.Quiebre>0).length||'0');
+    }
+    if(!_isParisQB){
+    // ── Formato antiguo SAP / Código ──
     // Detectar columnas (flexible)
     const sample=qbData[0]||{};
     const keys=Object.keys(sample);
@@ -1222,6 +1267,7 @@ async function processFiles(){
       });
     }
   }
+    }// end if(!_isParisQB)
 
   // Badges
   const cad=S.rows.filter(r=>r.Tipo==='Cadena').length;
@@ -1810,12 +1856,15 @@ function chgEst(oc,sel){S.overrides[oc]=sel.value;sel.className='est-sel '+estCl
 // ── QUIEBRES — renderizado con Plotly ─────────────────────────
 function renderQuiebres(){
   const body=document.getElementById('body-quiebres');
-  if(!S.qbRows.length && !S.qbCodRows.length){
-    body.innerHTML=`<div class="empty"><div class="empty-icon">⚡</div><div class="empty-t">Sin archivo de quiebres</div><div class="empty-s">Sube el Archivo 4 (Quiebres) para ver el análisis de caída de Fill Rate</div></div>`;
+  if(!S.qbRows.length && !S.qbCodRows.length && !(S.qbParisRows&&S.qbParisRows.length)){
+    body.innerHTML='<div class="empty"><div class="empty-icon">⚡</div><div class="empty-t">Sin archivo de quiebres</div><div class="empty-s">Sube el archivo de quiebres para ver el análisis</div></div>';
     return;
   }
+  // Nuevo formato París → tiene prioridad
+  if(S.qbParisRows&&S.qbParisRows.length){renderQuiebresParisSection();return;}
+  // Nuevo formato por código (Pendiente/A Despachar) → Cencosud
+  if(S.qbCodRows&&S.qbCodRows.length){renderQuiebresCodigosSection();return;}
 
-  // ── Formato antiguo (Cust.Ref + SAP) ──
   if(S.qbRows.length){
     const totQB=S.qbRows.reduce((a,r)=>a+r.Quiebre,0);
     const totOQ=S.qbRows.reduce((a,r)=>a+r.oQ,0);
@@ -2085,6 +2134,191 @@ function expCodXL(){
   XLSX.writeFile(wb,`quiebres_por_codigo_${TODAY}.xlsx`);
 }
 
+
+// ── QUIEBRES PARÍS — sección completa con Plotly ──────────────────
+function renderQuiebresParisSection(){
+  const body=document.getElementById('body-quiebres');
+  const allRows=S.qbParisRows;
+  const rows=allRows.filter(r=>r.Quiebre>0);
+
+  const totSol=allRows.reduce((a,r)=>a+r.Sol,0);
+  const totRec=allRows.reduce((a,r)=>a+r.Rec,0);
+  const totQb=allRows.reduce((a,r)=>a+r.Quiebre,0);
+  const frGlob=totSol>0?Math.round(totRec/totSol*100):0;
+  const ocs=new Set(rows.map(r=>r.OC)).size;
+  const skus=new Set(rows.map(r=>r.Cod)).size;
+
+  body.innerHTML=`
+  <div class="kpi-grid kr5" style="margin-bottom:18px">
+    <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal),var(--cal-d))"></div><div class="kpi-lbl">Unid. Solicitadas</div><div class="kpi-v xs">${fmt(totSol)}</div><div class="kpi-sub">Total período</div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">Unid. Recibidas</div><div class="kpi-v xs">${fmt(totRec)}</div><div class="kpi-sub">Recepcionadas</div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rd),#A01010)"></div><div class="kpi-lbl">Unid. en Quiebre</div><div class="kpi-v xs">${fmt(totQb)}</div><div class="kpi-sub">Solicitado − Recibido</div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--pu),#5C3CE0)"></div><div class="kpi-lbl">Fill Rate Global</div><div class="kpi-v">${frGlob}%</div><div class="kpi-sub">Recibido ÷ Solicitado</div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--am),#C8780A)"></div><div class="kpi-lbl">OCs con quiebre</div><div class="kpi-v">${ocs}</div><div class="kpi-sub">${skus} SKUs afectados</div></div>
+  </div>
+
+  <div class="ch2" style="margin-bottom:18px">
+    <div class="chcard"><div class="ch-hd"><div><div class="ch-title">Quiebre por Departamento</div><div class="ch-sub">Unidades + FR%</div></div></div><div class="ch-wrap" style="height:220px"><div id="pqb-dep" style="height:220px"></div></div></div>
+    <div class="chcard"><div class="ch-hd"><div><div class="ch-title">Canal — Cadena vs Ecommerce</div><div class="ch-sub">Quiebre por canal de distribución</div></div></div><div class="ch-wrap" style="height:220px"><div id="pqb-canal" style="height:220px"></div></div></div>
+  </div>
+  <div class="ch2" style="margin-bottom:18px">
+    <div class="chcard"><div class="ch-hd"><div><div class="ch-title">Top 20 Tiendas con mayor quiebre</div><div class="ch-sub">Local Destino · unidades sin recibir</div></div></div><div class="ch-wrap" style="height:300px"><div id="pqb-tda" style="height:300px"></div></div></div>
+    <div class="chcard"><div class="ch-hd"><div><div class="ch-title">Top 20 SKU con mayor quiebre</div><div class="ch-sub">Código producto proveedor</div></div></div><div class="ch-wrap" style="height:300px"><div id="pqb-sku" style="height:300px"></div></div></div>
+  </div>
+  <div class="chcard" style="margin-bottom:18px"><div class="ch-hd"><div><div class="ch-title">Curva Pareto — SKU 80/20</div><div class="ch-sub">% acumulado del quiebre total</div></div></div><div class="ch-wrap" style="height:260px"><div id="pqb-pareto" style="height:260px"></div></div></div>
+
+  <div class="tbl-card">
+    <div class="tbl-bar"><span class="tbl-title">⚡ Detalle quiebres por OC · SKU · Tienda</span>
+      <div class="tbl-acts"><span class="cnt-bdg qb" id="cnt-pbqb">${rows.length} líneas</span></div></div>
+    <div class="filt">
+      <span class="f-lbl">OC</span><input class="f-inp" id="pbf-oc" placeholder="488634" oninput="filterParisQB()" style="width:85px">
+      <span class="f-lbl">Depto</span><select class="f-sel" id="pbf-dep" onchange="filterParisQB()"><option value="">Todos</option></select>
+      <span class="f-lbl">Canal</span><select class="f-sel" id="pbf-canal" onchange="filterParisQB()"><option value="">Todos</option><option>Cadena</option><option>Ecommerce</option></select>
+      <span class="f-lbl">Tienda</span><input class="f-inp" id="pbf-tda" placeholder="Paris..." oninput="filterParisQB()" style="width:110px">
+      <span class="f-lbl">SKU/Cod</span><input class="f-inp" id="pbf-cod" placeholder="405055..." oninput="filterParisQB()" style="width:100px">
+      <button class="btn-clr" onclick="clrParisQB()">✕ Limpiar</button>
+    </div>
+    <div class="tbl-wrap"><table class="mtbl"><thead><tr>
+      <th>OC</th><th>Departamento</th><th>Canal</th><th>Tienda Destino</th>
+      <th>Cód. Prov.</th><th>Descripción</th><th>Solicitado</th><th>Recibido</th><th>Quiebre</th><th>FR %</th>
+    </tr></thead><tbody id="tbody-paris-qb"></tbody></table></div>
+    <div class="tbl-foot"><span class="tbl-pg" id="pg-paris-qb">—</span><div class="tbl-ex">
+      <button class="btn-ex" onclick="expParisQBXL()"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Excel</button>
+    </div></div>
+  </div>`;
+
+  // Fill depto filter
+  const deps=[...new Set(rows.map(r=>r.Dep))].sort();
+  const depSel=document.getElementById('pbf-dep');
+  deps.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;depSel.appendChild(o);});
+
+  window._parisQBRows=rows;
+  renderParisQBTable(rows);
+  setTimeout(()=>buildParisQBCharts(allRows,rows),80);
+}
+
+function buildParisQBCharts(allRows,qbRows){
+  const PLY={paper_bgcolor:'transparent',plot_bgcolor:'transparent',
+    font:{family:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',size:11,color:'#6899A5'},
+    hoverlabel:{bgcolor:'#0C2D35',bordercolor:'#0C2D35',font:{color:'#fff',size:12}}};
+
+  const C_CAL='#27BFBF', C_GRAY='#444441', C_RED='#E05252';
+
+  // 1. Por departamento
+  const byDep={};
+  allRows.forEach(r=>{if(!byDep[r.Dep])byDep[r.Dep]={sol:0,rec:0,qb:0};byDep[r.Dep].sol+=r.Sol;byDep[r.Dep].rec+=r.Rec;byDep[r.Dep].qb+=r.Quiebre;});
+  const depE=Object.entries(byDep).sort((a,b)=>b[1].qb-a[1].qb);
+  if(document.getElementById('pqb-dep')) Plotly.newPlot('pqb-dep',[
+    {type:'bar',name:'Quiebre',x:depE.map(e=>e[0]),y:depE.map(e=>e[1].qb),marker:{color:C_RED,cornerradius:4},hovertemplate:'<b>%{x}</b><br>Quiebre: %{y}<extra></extra>'},
+    {type:'scatter',name:'FR %',x:depE.map(e=>e[0]),y:depE.map(e=>e[1].sol>0?+(e[1].rec/e[1].sol*100).toFixed(1):0),yaxis:'y2',mode:'lines+markers',line:{color:C_CAL,width:2.5},marker:{size:8,color:C_CAL}}
+  ],Object.assign({},PLY,{yaxis:{gridcolor:'#EDF3F5',zeroline:false},yaxis2:{overlaying:'y',side:'right',range:[0,105],ticksuffix:'%',gridcolor:'transparent',zeroline:false},legend:{orientation:'h',y:-0.3,x:.5,xanchor:'center'},margin:{t:10,b:60,l:50,r:60},bargap:.35}),{responsive:true,displayModeBar:false});
+
+  // 2. Canal
+  const byCanal={Cadena:{sol:0,qb:0},Ecommerce:{sol:0,qb:0}};
+  allRows.forEach(r=>{if(byCanal[r.Canal]){byCanal[r.Canal].sol+=r.Sol;byCanal[r.Canal].qb+=r.Quiebre;}});
+  const cE=Object.entries(byCanal);
+  if(document.getElementById('pqb-canal')) Plotly.newPlot('pqb-canal',[
+    {type:'bar',x:cE.map(e=>e[0]),y:cE.map(e=>e[1].qb),
+     marker:{color:[C_CAL,C_GRAY],cornerradius:6},barPercentage:.5,
+     hovertemplate:'<b>%{x}</b><br>Quiebre: %{y} uds<br>FR: %{customdata}%<extra></extra>',
+     customdata:cE.map(e=>e[1].sol>0?+(( e[1].sol-e[1].qb)/e[1].sol*100).toFixed(1):0)}
+  ],Object.assign({},PLY,{yaxis:{gridcolor:'#EDF3F5',zeroline:false},margin:{t:10,b:40,l:50,r:20},bargap:.4,showlegend:false}),{responsive:true,displayModeBar:false});
+
+  // 3. Top 20 tiendas
+  const byTda={};
+  allRows.forEach(r=>{if(!byTda[r.LocalD])byTda[r.LocalD]={sol:0,qb:0};byTda[r.LocalD].sol+=r.Sol;byTda[r.LocalD].qb+=r.Quiebre;});
+  const tdaE=Object.entries(byTda).sort((a,b)=>b[1].qb-a[1].qb).slice(0,20);
+  if(document.getElementById('pqb-tda')) Plotly.newPlot('pqb-tda',[
+    {type:'bar',orientation:'h',x:tdaE.map(e=>e[1].qb).reverse(),y:tdaE.map(e=>e[0]).reverse(),
+     marker:{color:tdaE.map(e=>e[1].qb>=300?C_RED:e[1].qb>=150?'#F5A623':C_CAL).reverse()},
+     hovertemplate:'<b>%{y}</b><br>Quiebre: %{x}<extra></extra>'}
+  ],Object.assign({},PLY,{xaxis:{gridcolor:'#EDF3F5',zeroline:false},yaxis:{automargin:true,tickfont:{size:10}},margin:{t:10,b:40,l:160,r:20}}),{responsive:true,displayModeBar:false});
+
+  // 4. Top 20 SKU
+  const bySku={};
+  allRows.forEach(r=>{const k=r.Cod+'|'+r.Desc.split('/')[0];if(!bySku[k])bySku[k]={Cod:r.Cod,Desc:r.Desc,sol:0,qb:0};bySku[k].sol+=r.Sol;bySku[k].qb+=r.Quiebre;});
+  const skuE=Object.values(bySku).sort((a,b)=>b.qb-a.qb).slice(0,20);
+  const skuLabs=skuE.map(r=>r.Cod.slice(0,8)+' '+r.Desc.split('/')[0].slice(0,20));
+  if(document.getElementById('pqb-sku')) Plotly.newPlot('pqb-sku',[
+    {type:'bar',orientation:'h',x:skuE.map(r=>r.qb).reverse(),y:skuLabs.reverse(),
+     marker:{color:'#7C5CFC',opacity:.85},
+     hovertemplate:'<b>%{customdata}</b><br>Quiebre: %{x}<extra></extra>',
+     customdata:skuE.map(r=>r.Cod).reverse()}
+  ],Object.assign({},PLY,{xaxis:{gridcolor:'#EDF3F5',zeroline:false},yaxis:{automargin:true,tickfont:{size:10}},margin:{t:10,b:40,l:160,r:20}}),{responsive:true,displayModeBar:false});
+
+  // 5. Pareto
+  const skuAll=Object.values(bySku).filter(r=>r.qb>0).sort((a,b)=>b.qb-a.qb);
+  const totQbAll=skuAll.reduce((a,r)=>a+r.qb,0);
+  let cum=0;
+  const pareto=skuAll.map((r,i)=>{cum+=r.qb;return{i:i+1,Cod:r.Cod,qb:r.qb,pct:totQbAll>0?+(cum/totQbAll*100).toFixed(1):0};});
+  if(document.getElementById('pqb-pareto')) Plotly.newPlot('pqb-pareto',[
+    {type:'bar',name:'Quiebre',x:pareto.map(p=>p.i),y:pareto.map(p=>p.qb),
+     marker:{color:pareto.map(p=>p.pct<=80?C_RED:'#DDE5E8')},
+     hovertemplate:'SKU #%{x}: %{customdata}<br>Quiebre: %{y}<extra></extra>',
+     customdata:pareto.map(p=>p.Cod)},
+    {type:'scatter',name:'% Acum.',x:pareto.map(p=>p.i),y:pareto.map(p=>p.pct),yaxis:'y2',
+     mode:'lines',line:{color:C_CAL,width:2.5}},
+    {type:'scatter',x:[1,pareto.length],y:[80,80],yaxis:'y2',mode:'lines',
+     line:{color:'#F5A623',width:1.5,dash:'dash'},showlegend:false,hoverinfo:'skip'}
+  ],Object.assign({},PLY,{yaxis:{gridcolor:'#EDF3F5',zeroline:false},yaxis2:{overlaying:'y',side:'right',range:[0,105],ticksuffix:'%',gridcolor:'transparent',zeroline:false},xaxis:{title:'SKU (por quiebre desc.)',gridcolor:'#EDF3F5'},legend:{orientation:'h',y:-0.3,x:.5,xanchor:'center'},margin:{t:10,b:60,l:50,r:60},annotations:[{x:0.02,y:82,xref:'paper',yref:'y2',text:'80%',showarrow:false,font:{color:'#F5A623',size:11}}]}),{responsive:true,displayModeBar:false});
+}
+
+function renderParisQBTable(rows){
+  const tb=document.getElementById('tbody-paris-qb'); if(!tb)return;
+  set('cnt-pbqb',rows.length+' líneas');
+  set('pg-paris-qb','Mostrando '+rows.length+' de '+(window._parisQBRows||rows).length+' con quiebre');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-t">Sin resultados</div></div></td></tr>';return;}
+  tb.innerHTML=rows.slice(0,300).map(r=>{
+    const frCls=r.FR>=90?'fr-hi':r.FR>=70?'fr-md':'fr-lo';
+    const canalBg=r.Canal==='Ecommerce'?'var(--rose-l)':'var(--cal-l)';
+    const canalCol=r.Canal==='Ecommerce'?'var(--rose-d)':'var(--cal-d)';
+    return '<tr>'+
+      '<td><strong>'+r.OC+'</strong></td>'+
+      '<td><span class="pill p-cal" style="font-size:9px">'+r.Dep.split(' ')[0]+'</span></td>'+
+      '<td><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+canalBg+';color:'+canalCol+'">'+r.Canal+'</span></td>'+
+      '<td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis">'+r.LocalD+'</td>'+
+      '<td><span class="pill p-gy" style="font-size:9px">'+r.Cod+'</span></td>'+
+      '<td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+r.Desc.split('/')[0]+'</td>'+
+      '<td style="text-align:right">'+r.Sol+'</td>'+
+      '<td style="text-align:right">'+r.Rec+'</td>'+
+      '<td style="text-align:right"><strong style="color:var(--rd)">'+r.Quiebre+'</strong></td>'+
+      '<td><span class="fr '+frCls+'">'+r.FR+'%</span></td>'+
+      '</tr>';
+  }).join('');
+  if(rows.length>300) tb.innerHTML+='<tr><td colspan="10" style="text-align:center;padding:10px;color:var(--tx3);font-size:11px">Exporta a Excel para ver las '+rows.length+' líneas completas</td></tr>';
+}
+
+function filterParisQB(){
+  const oc=(document.getElementById('pbf-oc')?.value||'').toLowerCase();
+  const dep=document.getElementById('pbf-dep')?.value||'';
+  const canal=document.getElementById('pbf-canal')?.value||'';
+  const tda=(document.getElementById('pbf-tda')?.value||'').toLowerCase();
+  const cod=(document.getElementById('pbf-cod')?.value||'').toLowerCase();
+  const src=window._parisQBRows||[];
+  const f=src.filter(r=>{
+    if(oc&&!r.OC.includes(oc))return false;
+    if(dep&&r.Dep!==dep)return false;
+    if(canal&&r.Canal!==canal)return false;
+    if(tda&&!r.LocalD.toLowerCase().includes(tda))return false;
+    if(cod&&!r.Cod.toLowerCase().includes(cod)&&!r.Desc.toLowerCase().includes(cod))return false;
+    return true;
+  });
+  renderParisQBTable(f);
+}
+
+function clrParisQB(){
+  ['pbf-oc','pbf-cod','pbf-tda'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['pbf-dep','pbf-canal'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  renderParisQBTable(window._parisQBRows||[]);
+}
+
+function expParisQBXL(){
+  const src=window._parisQBRows||[];if(!src.length)return;
+  const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'Canal':r.Canal,'Tienda Destino':r.LocalD,'Tienda Entrega':r.LocalE,'Cód. Prov.':r.Cod,'Descripción':r.Desc,'Solicitado':r.Sol,'Recibido':r.Rec,'Quiebre':r.Quiebre,'FR %':r.FR,'Estado':r.Estado}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Quiebres París');
+  XLSX.writeFile(wb,'quiebres_paris_'+TODAY+'.xlsx');
+}
 
 function fillQBDrops(){
   const deps=[...new Set(S.qbRows.map(r=>r.Dep))].sort();
