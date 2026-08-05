@@ -1327,6 +1327,7 @@ function exportSnapshot(){
 function montoNum(v){if(typeof v==='number')return v;return parseInt(String(v).replace(/[^0-9]/g,''))||0;}
 function fmt(n){return Math.round(n||0).toLocaleString('es-CL');}
 function fmtM(n){return n>0?'$'+fmt(n):'—';}
+function fmtLT(n){if(n==null||n===undefined)return'—';const c=n<=7?'var(--gr-d)':n<=14?'var(--am-d)':'var(--rd)';return '<span style="font-weight:700;color:'+c+'">'+(n===0?'hoy':n===1?'1 día':n+' días')+'</span>';}
 function fmtD(s){if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}
 function getEst(r){return S.overrides[r.OC]||r.EstAuto;}
 function estCls(est){
@@ -1461,7 +1462,7 @@ function buildTblHTML(pid,title,cc,ic){
     </div>
     <div class="tbl-wrap"><table class="mtbl"><thead><tr>
       <th>OC</th><th>Departamento</th><th>PD</th>${extra1}<th>Fecha despacho</th><th>Status</th>${extra2}
-      <th>Unid. Ingreso</th><th>Unid. Liberadas</th><th>Unid. Despachadas</th><th>FR Lib</th><th>FR Fact</th><th>Monto Ingresado</th><th>Monto Liberado</th><th>Monto Facturado</th><th>N° Factura</th><th>Estado</th>
+      <th>Unid. Ingreso</th><th>Unid. Liberadas</th><th>Lead Time (días)</th><th>FR Lib</th><th>FR Fact</th><th>Monto Ingresado</th><th>Monto Liberado</th><th>Monto Facturado</th><th>N° Factura</th><th>Estado</th>
     </tr></thead><tbody id="tbody-${pid}"></tbody></table></div>
     <div class="tbl-foot"><span class="tbl-pg" id="pg-${pid}">—</span><div class="tbl-ex">
       <button class="btn-ex" onclick="expCSV('${pid}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
@@ -1528,7 +1529,7 @@ function renderRows(pid,rows,tot){
       ${isLoc?`<td><div class="suc-wrap">${locs}${more}</div></td>`:''}
       <td>${fmt(r.oQ)}</td>
       <td>${fmt(r.dQ)}</td>
-      <td>${fmt(r.UnidDesp)}</td>
+      <td>${fmtLT(r.LeadTime)}</td>
       <td><span class="fr ${frCls(r.FR1)}">${r.FR1}%</span></td>
       <td><span class="fr ${frCls(r.FR2)}">${r.FR2}%</span></td>
       <td>${fmtM(r.oA)}</td><td>${fmtM(r.dA)}</td><td>${fmtM(r.iA)}</td>
