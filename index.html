@@ -1134,6 +1134,12 @@ async function processFiles(){
   set('bdg-agenda',S.rows.length); set('bdg-cadena',cad); set('bdg-ecomm',eco);
   const totalQbCount=S.qbRows.length+S.qbCodRows.length;
   set('bdg-qb',totalQbCount>0?totalQbCount:'0');
+  // Actualizar labels y badges según cliente
+  const _lc=document.getElementById('lbl-cadena');if(_lc)_lc.textContent=isFala?'Tiendas':'Predistribuidas';
+  const _cn=document.getElementById('cli-chip-nm');if(_cn)_cn.textContent=isFala?'Falabella':'Cencosud París';
+  const _ds=document.getElementById('dash-sub-client');if(_ds)_ds.textContent=isFala?'Falabella':'Cencosud París';
+  const _bb=document.getElementById('client-badge-btn');if(_bb)_bb.className='client-badge '+(isFala?'fala':'paris');
+  const _bl=document.getElementById('client-badge-lbl');if(_bl)_bl.textContent=isFala?'Falabella':'París';
 
   log.textContent=`✅ ${S.rows.length} OC consolidadas · ${cad} Cadena · ${eco} Ecomm · ${S.qbRows.length} quiebres OC · ${S.qbCodRows.length} quiebres por código`;
   document.getElementById('btn-proc').disabled=false;
@@ -1911,13 +1917,12 @@ function dl(blob,name){const a=document.createElement('a');a.href=URL.createObje
 // ── INIT ──────────────────────────────────────────────────
 function initApp(){
   buildCalendar();
-  renderUploadPanel();
+
   // Set date in welcome footer
   const wf=document.getElementById('wc-fecha');
   if(wf) wf.textContent=new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-  // Si el archivo fue exportado como "Dashboard Completo" (snapshot),
-  // window.__PUMA_SNAPSHOT__ existe y tiene prioridad sobre localStorage.
+  // Modo snapshot (dashboard exportado con datos)
   if(window.__PUMA_SNAPSHOT_MODE__ && window.__PUMA_SNAPSHOT__){
     const data=window.__PUMA_SNAPSHOT__;
     S.rows=data.rows||[]; S.qbRows=data.qbRows||[]; S.qbCodRows=data.qbCodRows||[]; S.overrides=data.overrides||{};
@@ -1927,14 +1932,23 @@ function initApp(){
     set('bdg-qb',S.qbRows.length>0?S.qbRows.length:'0');
     const saved=new Date(data.savedAt);
     set('upd-chip','📦 Snapshot compartido · '+saved.toLocaleDateString('es-CL')+' '+saved.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
+    // Hide welcome, show dashboard directly
+    const ov=document.getElementById('welcome-overlay');
+    if(ov)ov.style.display='none';
     buildKPIs(); buildCharts(); buildCalendar(); buildDeptos();
-  } else {
-    initDropzone();
-    const hadSaved = loadFromStorage();
-    if(!hadSaved){ updateSavedBar(); }
+    renderUploadPanel();
+    goPage('dashboard');
+    return;
   }
 
-  goPage('dashboard');
+  // Modo normal: mostrar pantalla de bienvenida para elegir cliente
+  renderUploadPanel();
+  const ov=document.getElementById('welcome-overlay');
+  if(ov)ov.style.display='flex';
+
+  // Si hay datos guardados localmente, cargarlos en segundo plano
+  initDropzone();
+  loadFromStorage();
 }
 initApp();
 
