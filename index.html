@@ -1032,7 +1032,12 @@ async function processFiles(){
   const olByOC={};
   olData.forEach(r=>{
     const oc=String(r['Num Order']||'').trim(); if(!oc)return;
-    if(!olByOC[oc])olByOC[oc]={dep:r['Departamento']||'—',pd:r['PD']||'—',cli:r['Cliente']||'',saps:[]};
+    if(!olByOC[oc]){
+      let _fc='';const _fd=r['Fecha Carga'];
+      if(_fd){const _dt=_fd instanceof Date?_fd:new Date(_fd);
+        if(!isNaN(_dt))_fc=_dt.toISOString().split('T')[0];}
+      olByOC[oc]={dep:r['Departamento']||'—',pd:r['PD']||'—',cli:r['Cliente']||'',saps:[],fechaCarga:_fc};
+    }
     olByOC[oc].saps.push({sap:String(r['SAP Code']||''),sapNm:r['SAP Name']||'',uQ:Number(r['Unidades'])||0,total:montoNum(r['Total']||0)});
   });
 
@@ -1052,7 +1057,10 @@ async function processFiles(){
     // Status: DATA_OL → B2B → FALA_RESUMEN
     const status=dl.status||b2b.status||'—';
     // Tipo/Canal: DATA_OL → FALA_RESUMEN → '—'
-    const tipo=dl.tipo||(isFala?'Cadena':'—');
+    let tipo=dl.tipo||(isFala?'Cadena':'—');
+    if(isFala&&so.markForNames&&so.markForNames.size>0){
+      tipo=[...so.markForNames].some(n=>n.includes('INTERNET'))?'Ecommerce':'Cadena';
+    }
     // Estado: FALA_RESUMEN → auto por fecha
     const estadoAuto=(!fd||fd>TODAY)?'Pendiente de despacho':'Mercadería recibida';
 
@@ -1077,9 +1085,10 @@ async function processFiles(){
       Status:status,Tipo:tipo,Locales:dl.locArr||[],LocDetalle:dl.locDetalle||[],
       UnidDesp:dl.unidDespacho||0,
       EstAuto:estadoAuto,
-      // Alertas de saldo: SO > GOWH
-      AlertaQty: alertaOQ, AlertaAmt: alertaOA,
-      soOQ: so.oQ||0, soOA: so.oA||0,
+      AlertaQty:alertaOQ,AlertaAmt:alertaOA,
+      soOQ:so.oQ||0,soOA:so.oA||0,
+      FechaCarga:ol.fechaCarga||'',
+      LeadTime:(()=>{const fc=ol.fechaCarga,fe=fd;if(!fc||!fe)return null;const d=Math.round((new Date(fe)-new Date(fc))/(864e5));return isNaN(d)?null:d;})(),
     };
   });
 
@@ -1437,7 +1446,7 @@ function renderTblPage(pid){
 
 function buildTblHTML(pid,title,cc,ic){
   const isTipo=pid==='agenda', isLoc=pid==='cadena';
-  const extra1=isTipo?'<th>Tipo</th>':'', extra2=isLoc?'<th>Sucursales</th>':'';
+  const extra1=isTipo?'<th>Canal</th>':'', extra2=isLoc?'<th>Sucursales</th>':'';
   const nc=15+(isTipo?1:0)+(isLoc?1:0);
   return`<div class="tbl-card">
     <div class="tbl-bar"><span class="tbl-title">${ic} ${title}</span><div class="tbl-acts"><span class="cnt-bdg ${cc}" id="cnt-${pid}">0</span></div></div>
@@ -1447,7 +1456,7 @@ function buildTblHTML(pid,title,cc,ic){
       <span class="f-lbl">PD</span><select class="f-sel" id="fpd-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option></select>
       <span class="f-lbl">Fecha</span><select class="f-sel" id="ffe-${pid}" onchange="doFilter('${pid}')"><option value="">Todas</option></select>
       <span class="f-lbl">Status</span><select class="f-sel" id="fst-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>DESPACHADO</option><option>EN PICKING</option><option>VAS &amp; DISTRO</option><option>PRE-DESPACHO</option><option>PRE-DISTRO</option></select>
-      <span class="f-lbl">Estado</span><select class="f-sel" id="fes-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>Mercadería recibida</option><option>Pendiente de despacho</option><option>Rechazo Parcial</option></select>
+      <span class="f-lbl">Estado</span><select class="f-sel" id="fes-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>Mercadería recibida</option><option>Pendiente de despacho</option><option>Ampliación</option><option>Sin Capacidad</option><option>Rechazo Parcial</option></select>
       <button class="btn-clr" onclick="clrFilter('${pid}')">✕ Limpiar</button>
     </div>
     <div class="tbl-wrap"><table class="mtbl"><thead><tr>
@@ -1527,6 +1536,8 @@ function renderRows(pid,rows,tot){
       <td><select class="est-sel ${eCls}" onchange="chgEst('${r.OC}',this)">
         <option value="Pendiente de despacho" ${est==='Pendiente de despacho'?'selected':''}>⏳ Pendiente</option>
         <option value="Mercadería recibida"   ${est==='Mercadería recibida'?'selected':''}>✅ Recibida</option>
+        <option value="Ampliación" ${est==='Ampliación'?'selected':''}>🔄 Ampliación</option>
+        <option value="Sin Capacidad" ${est==='Sin Capacidad'?'selected':''}>🚫 Sin Capacidad</option>
         <option value="Rechazo Parcial"       ${est==='Rechazo Parcial'?'selected':''}>⚠️ Rechazo Parcial</option>
       </select></td>
     </tr>`;
@@ -1911,11 +1922,11 @@ function buildDeptos(){
 
 // ── EXPORTS ───────────────────────────────────────────────
 function getSrc(pid){if(pid==='cadena')return S.rows.filter(r=>r.Tipo==='Cadena');if(pid==='ecomm')return S.rows.filter(r=>r.Tipo==='Ecommerce');return S.rows;}
-const HDR=['OC','Departamento','PD','Tipo','Fecha Despacho','Status','Unid. Ingreso','Unid. Liberadas','Unid. Despachadas','FR Liberado %','FR Facturado %','Monto Ingresado','Monto Liberado','Monto Facturado','N Factura','Estado'];
-function expCSV(pid){const src=getSrc(pid);if(!src.length)return;const rows=src.map(r=>[r.OC,r.Dep,r.PD,r.Tipo,r.Fecha,r.Status,r.oQ,r.dQ,r.UnidDesp,r.FR1,r.FR2,r.oA,r.dA,r.iA,r.Gs,getEst(r)]);const csv=[HDR,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');dl(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),`puma_${pid}_${TODAY}.csv`);}
+const HDR=['OC','Departamento','PD','Canal','Fecha Despacho','Fecha Carga GOWH','Lead Time (días)','Status','Unid. Ingreso','Unid. Liberadas','FR Liberado %','FR Facturado %','Monto Ingresado','Monto Liberado','Monto Facturado','N Factura','Estado'];
+function expCSV(pid){const src=getSrc(pid);if(!src.length)return;const rows=src.map(r=>[r.OC,r.Dep,r.PD,r.Tipo||'—',r.Fecha,r.FechaCarga||'',r.LeadTime!=null?r.LeadTime:'',r.Status,r.oQ,r.dQ,r.FR1,r.FR2,r.oA,r.dA,r.iA,r.Gs,getEst(r)]);const csv=[HDR,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');dl(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),`puma_${pid}_${TODAY}.csv`);}
 function expXL(pid){
   const src=getSrc(pid);if(!src.length)return;
-  const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'Tipo':r.Tipo,'Fecha':r.Fecha,'Status':r.Status,'Unid. Ingreso':r.oQ,'Unid. Liberadas':r.dQ,'Unid. Despachadas':r.UnidDesp,'FR Lib%':r.FR1,'FR Fact%':r.FR2,'Monto Ing':r.oA,'Monto Lib':r.dA,'Monto Fact':r.iA,'Factura':r.Gs,'Estado':getEst(r)}));
+  const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'Canal':r.Tipo||'—','Fecha Despacho':r.Fecha,'Fecha Carga GOWH':r.FechaCarga||'','Lead Time (días)':r.LeadTime!=null?r.LeadTime:'','Status':r.Status,'Unid. Ingreso':r.oQ,'Unid. Liberadas':r.dQ,'FR Lib%':r.FR1,'FR Fact%':r.FR2,'Monto Ing':r.oA,'Monto Lib':r.dA,'Monto Fact':r.iA,'Factura':r.Gs,'Estado':getEst(r)}));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Dashboard');
 
@@ -1941,6 +1952,8 @@ function dl(blob,name){const a=document.createElement('a');a.href=URL.createObje
 // ── INIT ──────────────────────────────────────────────────
 function initApp(){
   buildCalendar();
+  // Ocultar Quiebres por defecto (cliente default=Falabella)
+  const _qbInit=document.getElementById("nv-quiebres");if(_qbInit)_qbInit.style.display="none";
 
   // Set date in welcome footer
   const wf=document.getElementById('wc-fecha');
