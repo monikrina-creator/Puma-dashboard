@@ -905,7 +905,7 @@ async function processFiles(){
     S.files.pr?readXL(S.files.pr,isFala?null:'data_logistica'):Promise.resolve([]),
     S.files.qb?readXL(S.files.qb):Promise.resolve([]),
     // Falabella: leer FALA_RESUMEN del mismo archivo GOWH → CANAL y ESTADO por OC
-    isFala&&S.files.ol?readXL(S.files.ol,'FALA_RESUMEN'):Promise.resolve([]),
+    Promise.resolve([]), // resData: FALA_RESUMEN no disponible en archivos separados
   ]);
 
   log.textContent=`✓ ${isFala?'GOWH':'OL'}:${olData.length} SO:${soData.length} ${isFala?'DATA_OL':'DataLog'}:${dlData.length} ${isFala?'B2B':'Quiebres'}:${qbData.length}${resData.length?' RESUMEN:'+resData.length:''}. Procesando...`;
@@ -987,20 +987,25 @@ async function processFiles(){
     });
   }
 
-  // ── B2B map: Status + Fecha + Factura para Falabella ──
+  // ── B2B map: multicliente → filtrar solo Falabella por columna CLIENTE ──
   const b2bMap={};
   if(isFala&&qbData.length){
     const b2bSample=qbData[0]||{};
-    const isB2B='HORA' in b2bSample&&('OC' in b2bSample||'FECHA ENTREGA' in b2bSample);
+    const isB2B='HORA' in b2bSample&&'OC' in b2bSample;
     if(isB2B){
+      const rankSt={'EN ANDEN':5,'VAS & DISTRO':4,'PRE-DISTRO':3,'EN PICKING':2,'EN EMISIÓN':1};
       qbData.forEach(r=>{
+        const cli=String(r['CLIENTE']||'').toUpperCase();
+        if(cli&&!cli.includes('FALABELLA'))return; // filtrar otros clientes
         const oc=String(r['OC']||'').split('.')[0].trim(); if(!oc)return;
-        if(!b2bMap[oc])b2bMap[oc]={status:'',fecha:'',hora:'',factura:''};
+        if(!b2bMap[oc])b2bMap[oc]={status:'',fecha:'',hora:'',factura:'',division:''};
         const b=b2bMap[oc];
-        b.status=b.status||(r['ESTADO']||'');
+        const newSt=String(r['ESTADO']||'').trim();
+        if(!b.status||(rankSt[newSt]||0)>(rankSt[b.status]||0))b.status=newSt;
         if(!b.fecha&&r['FECHA ENTREGA']){const dt=r['FECHA ENTREGA'] instanceof Date?r['FECHA ENTREGA']:new Date(r['FECHA ENTREGA']);if(!isNaN(dt))b.fecha=dt.toISOString().split('T')[0];}
-        if(!b.hora&&r['HORA'])b.hora=String(r['HORA']).trim();
+        if(!b.hora&&r['HORA']){const ht=r['HORA'];if(ht instanceof Date)b.hora=('0'+ht.getHours()).slice(-2)+':'+('0'+ht.getMinutes()).slice(-2);else b.hora=String(ht).substring(0,5).trim();}
         if(!b.factura&&r['FACTURA'])b.factura=String(r['FACTURA']).split('.')[0].trim();
+        if(!b.division&&r['DIVISION'])b.division=String(r['DIVISION']).trim();
       });
     }
   }
@@ -1008,7 +1013,8 @@ async function processFiles(){
   Object.values(dlMap).forEach(d=>{
     const arr=[...d.locales];
     if(isFala){
-      d.tipo=arr.length>0&&arr.every(l=>l.toUpperCase()==='INTERNET')?'Ecommerce':'Cadena';
+      const hasInternet=arr.some(l=>l.toUpperCase()==='INTERNET');
+      d.tipo=hasInternet?'Ecommerce':'Cadena';
     } else {
       d.tipo=arr.length>0&&arr.every(l=>l.toUpperCase().includes('OMNI'))?'Ecommerce':'Cadena';
     }
@@ -1032,13 +1038,13 @@ async function processFiles(){
     const fr2=so.oQ>0?Math.round(so.iQ/so.oQ*100):0;
 
     // Fecha: DATA_OL → B2B → FALA_RESUMEN
-    const fd=dl.fecha||b2b.fecha||res.fecha||'';
+    const fd=dl.fecha||b2b.fecha||'';
     // Status: DATA_OL → B2B → FALA_RESUMEN
-    const status=dl.status||b2b.status||res.status||'—';
+    const status=dl.status||b2b.status||'—';
     // Tipo/Canal: DATA_OL → FALA_RESUMEN → '—'
-    const tipo=dl.tipo||res.tipo||'—';
+    const tipo=dl.tipo||(isFala?'Cadena':'—');
     // Estado: FALA_RESUMEN → auto por fecha
-    const estadoAuto=res.estado||((!fd||fd>TODAY)?'Pendiente de despacho':'Mercadería recibida');
+    const estadoAuto=(!fd||fd>TODAY)?'Pendiente de despacho':'Mercadería recibida';
 
     const totalOA=ol.saps.reduce((a,s)=>a+s.total,0);
     return{OC:oc,Dep:ol.dep,PD:ol.pd,Cli:ol.cli||so.soldTo||(isFala?'FALABELLA':'PARIS'),
