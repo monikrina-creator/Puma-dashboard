@@ -59,6 +59,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 //# sourceMappingURL=chart.umd.js.map
 
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script>if(typeof Chart!=="undefined"&&typeof ChartAnnotation!=="undefined")Chart.register(ChartAnnotation);</script>
 <style>
 :root{
   --cal:#27BFBF;--cal-l:#E3F7F7;--cal-m:#7DD8D8;--cal-d:#0E9090;--cal-dp:#07585C;
@@ -557,15 +559,64 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rose-m),var(--rose-dp))"></div><div class="kpi-lbl">Ecommerce</div><div class="kpi-v" id="k-eco">—</div><div class="kpi-sub">OC CD Omnicanal</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rd),#A01010)"></div><div class="kpi-lbl">Rechazo Parcial</div><div class="kpi-v" id="k-rechazo">—</div><div class="kpi-tr dn" id="tr-rechazo">● —</div></div>
     </div>
-    <div class="sec-lbl">Análisis operativo por departamento y estado</div>
-    <div class="ch3">
-      <div class="chcard"><div class="ch-hd"><div><div class="ch-title">Fill Rate por Departamento</div><div class="ch-sub">Liberado vs. Facturado %</div></div></div><div class="ch-wrap h240"><canvas id="ch-fr-dep"></canvas></div></div>
-      <div class="chcard"><div class="ch-hd"><div><div class="ch-title">Estado Operativo</div><div class="ch-sub">Distribución OC</div></div></div><div class="ch-wrap h240"><canvas id="ch-estado"></canvas></div></div>
-      <div class="chcard"><div class="ch-hd"><div><div class="ch-title">OC por Fecha</div><div class="ch-sub">Evolución despacho</div></div></div><div class="ch-wrap h240"><canvas id="ch-fecha"></canvas></div></div>
+    <div class="sec-lbl">Fill Rate · Lead Time · Canal</div>
+
+    <!-- ROW 1: Bullet FR + Lead Time Bullet -->
+    <div class="ch2" style="margin-bottom:16px">
+      <div class="chcard">
+        <div class="ch-hd"><div>
+          <div class="ch-title">Fill Rate por Departamento</div>
+          <div class="ch-sub">Bullet chart · objetivo 95% · calipso=liberado · gris=facturado</div>
+        </div></div>
+        <div class="ch-wrap" style="height:260px"><canvas id="ch-fr-dep" role="img" aria-label="Fill Rate por departamento bullet chart"></canvas></div>
+      </div>
+      <div class="chcard">
+        <div class="ch-hd"><div>
+          <div class="ch-title">Lead Time por OC</div>
+          <div class="ch-sub">Días desde carga GOWH hasta despacho · objetivo ≤7 días</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="font-size:10px;font-weight:600;background:#D8F7EC;color:#0D6B42;padding:2px 8px;border-radius:8px">≤7 días ✓</span>
+          <span style="font-size:10px;font-weight:600;background:#FDEAEA;color:#E05252;padding:2px 8px;border-radius:8px">&gt;7 días ⚠</span>
+        </div></div>
+        <div class="ch-wrap" style="height:260px"><canvas id="ch-leadtime" role="img" aria-label="Lead time por OC"></canvas></div>
+      </div>
     </div>
-    <div class="ch2">
-      <div class="chcard"><div class="ch-hd"><div><div class="ch-title">Monto Liberado por Departamento</div><div class="ch-sub">Delivered Amount CLP</div></div></div><div class="ch-wrap h200"><canvas id="ch-mlib"></canvas></div></div>
-      <div class="chcard"><div class="ch-hd"><div><div class="ch-title">Cadena vs. Ecommerce</div><div class="ch-sub">Distribución por tipo de destino</div></div></div><div class="ch-wrap h200"><canvas id="ch-tipo"></canvas></div></div>
+
+    <!-- ROW 2: Estado horizontal + Canal stacked 100% -->
+    <div class="ch2" style="margin-bottom:16px">
+      <div class="chcard">
+        <div class="ch-hd"><div>
+          <div class="ch-title">Estado Operativo</div>
+          <div class="ch-sub">OCs por estado · ordenadas mayor a menor</div>
+        </div></div>
+        <div class="ch-wrap" style="height:220px"><canvas id="ch-estado" role="img" aria-label="Estado operativo OCs"></canvas></div>
+      </div>
+      <div class="chcard">
+        <div class="ch-hd"><div>
+          <div class="ch-title">Canal — Cadena vs. Ecommerce</div>
+          <div class="ch-sub">Distribución 100% por departamento</div>
+        </div></div>
+        <div class="ch-wrap" style="height:220px"><canvas id="ch-tipo" role="img" aria-label="Canal cadena vs ecommerce por departamento"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ROW 3: Monto por depto (columnas) + OC por fecha (línea) -->
+    <div class="ch2" style="margin-bottom:16px">
+      <div class="chcard">
+        <div class="ch-hd"><div>
+          <div class="ch-title">Ranking Departamentos — Monto Liberado</div>
+          <div class="ch-sub">Barras horizontales ordenadas · CLP</div>
+        </div></div>
+        <div class="ch-wrap" style="height:220px"><canvas id="ch-mlib" role="img" aria-label="Ranking departamentos monto liberado"></canvas></div>
+      </div>
+      <div class="chcard">
+        <div class="ch-hd"><div>
+          <div class="ch-title">OC por Fecha de Despacho</div>
+          <div class="ch-sub">Línea con puntos · evolución temporal</div>
+        </div></div>
+        <div class="ch-wrap" style="height:220px"><canvas id="ch-fecha" role="img" aria-label="OC por fecha de despacho"></canvas></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1374,49 +1425,246 @@ const cDef={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:f
           y:{ticks:{font:{size:10},color:'#6899A5'},grid:{color:'rgba(39,191,191,.08)'}}}};
 
 function buildCharts(){
-  const dm=depMap(); const labs=Object.keys(dm);
+  const dm=depMap();
+  // Ordenar departamentos por monto liberado desc para todos los gráficos
+  const labs=Object.keys(dm).sort((a,b)=>dm[b].dA-dm[a].dA);
 
+  // ── Paleta semántica: Calipso · Carbón · Rojo ────────────────────
+  const C_CAL='#27BFBF', C_CAL_L='rgba(39,191,191,.18)', C_CAL_M='rgba(39,191,191,.55)';
+  const C_GRAY='#6899A5', C_GRAY_L='rgba(104,153,165,.35)';
+  const C_RED='#E05252', C_RED_L='rgba(224,82,82,.18)';
+  const C_GREEN='#2ECC8A';
+  const TICK={color:'#6899A5',font:{size:10}};
+  const GRID={color:'rgba(104,153,165,.12)',drawBorder:false};
+  const TTP={backgroundColor:'#0C2D35',titleColor:'#fff',bodyColor:'rgba(255,255,255,.85)',padding:10,cornerRadius:8,displayColors:false};
+
+  // ── 1. BULLET CHART: Fill Rate por Depto ─────────────────────────
+  // Simulamos bullet con barras horizontales superpuestas:
+  // background=rango 0-100 (gris muy claro), FR Lib=barra calipso, FR Fact=barra carbón, línea objetivo=95
   dC('fr');
-  S.charts.fr=new Chart(document.getElementById('ch-fr-dep'),{type:'bar',
-    data:{labels:labs,datasets:[
-      {label:'FR Liberado',data:labs.map(d=>dm[d].fr1),backgroundColor:'rgba(39,191,191,.72)',borderRadius:5},
-      {label:'FR Facturado',data:labs.map(d=>dm[d].fr2),backgroundColor:'rgba(217,100,136,.72)',borderRadius:5}
-    ]},
-    options:{...cDef,plugins:{legend:{display:true,labels:{font:{size:10},color:'#2D6070',boxWidth:12}}},
-      scales:{...cDef.scales,y:{...cDef.scales.y,min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#6899A5'}}}}
+  S.charts.fr=new Chart(document.getElementById('ch-fr-dep'),{
+    type:'bar',
+    data:{
+      labels:labs,
+      datasets:[
+        // Fondo de rango (0→100)
+        {label:'',data:labs.map(()=>100),backgroundColor:'rgba(104,153,165,.08)',borderRadius:4,barPercentage:.7,categoryPercentage:.8,order:3},
+        // FR Liberado (calipso)
+        {label:'FR Liberado',data:labs.map(d=>dm[d].fr1),backgroundColor:C_CAL,borderRadius:4,barPercentage:.7,categoryPercentage:.8,order:2},
+        // FR Facturado (gris, más estrecho)
+        {label:'FR Facturado',data:labs.map(d=>dm[d].fr2),backgroundColor:C_GRAY_L,borderRadius:4,barPercentage:.35,categoryPercentage:.8,order:1},
+      ]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{font:{size:10},color:'#2D6070',boxWidth:10,usePointStyle:true,filter:i=>i.datasetIndex>0}},
+        tooltip:{...TTP,callbacks:{
+          title:ctx=>'Depto: '+ctx[0].label,
+          label:ctx=>ctx.datasetIndex===1?'FR Liberado: '+ctx.raw+'%':ctx.datasetIndex===2?'FR Facturado: '+ctx.raw+'%':''
+        }},
+        annotation:{
+          annotations:{
+            obj:{type:'line',xMin:95,xMax:95,borderColor:'#E05252',borderWidth:2,borderDash:[4,4],
+              label:{content:'Objetivo 95%',display:true,position:'start',color:'#E05252',font:{size:9,weight:'bold'},backgroundColor:'transparent'}}
+          }
+        }
+      },
+      scales:{
+        x:{min:0,max:100,grid:GRID,ticks:{...TICK,callback:v=>v+'%'},border:{display:false}},
+        y:{grid:{display:false},ticks:{...TICK,mirror:false},border:{display:false}}
+      }
+    }
   });
 
-  const stC={}; S.rows.forEach(r=>{stC[r.Status]=(stC[r.Status]||0)+1;});
-  const stL=Object.keys(stC);
-  const stCol=['rgba(46,204,138,.8)','rgba(245,166,35,.8)','rgba(39,191,191,.8)','rgba(141,205,232,.8)','rgba(167,139,250,.8)'];
+  // ── 2. LEAD TIME BULLET ───────────────────────────────────────────
+  // OC con lead time, ordenadas, coloreadas rojo si >7 días
+  const ltRows=S.rows.filter(r=>r.LeadTime!=null).sort((a,b)=>b.LeadTime-a.LeadTime).slice(0,15);
+  dC('lt');
+  if(document.getElementById('ch-leadtime')&&ltRows.length){
+    S.charts.lt=new Chart(document.getElementById('ch-leadtime'),{
+      type:'bar',
+      data:{
+        labels:ltRows.map(r=>r.OC),
+        datasets:[
+          {label:'',data:ltRows.map(()=>7),backgroundColor:'rgba(46,204,138,.12)',borderRadius:4,barPercentage:.7,order:2},
+          {label:'Lead Time (días)',
+           data:ltRows.map(r=>r.LeadTime),
+           backgroundColor:ltRows.map(r=>r.LeadTime>7?C_RED:C_CAL),
+           borderRadius:4,barPercentage:.7,order:1}
+        ]
+      },
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{...TTP,callbacks:{
+            title:ctx=>'OC '+ctx[0].label,
+            label:ctx=>ctx.datasetIndex===1?'Lead Time: '+ctx.raw+' días'+(ctx.raw>7?' ⚠ fuera de objetivo':'  ✓ en plazo'):''
+          }},
+          annotation:{
+            annotations:{
+              obj7:{type:'line',xMin:7,xMax:7,borderColor:'#2ECC8A',borderWidth:2,borderDash:[4,4],
+                label:{content:'Obj. 7 días',display:true,position:'end',color:'#1A7A52',font:{size:9,weight:'bold'},backgroundColor:'transparent'}}
+            }
+          }
+        },
+        scales:{
+          x:{min:0,grid:GRID,ticks:{...TICK,stepSize:2},border:{display:false}},
+          y:{grid:{display:false},ticks:{...TICK,font:{size:9}},border:{display:false}}
+        }
+      }
+    });
+  }
+
+  // ── 3. ESTADO OPERATIVO — barras horizontales ordenadas ───────────
+  const stC={};
+  S.rows.forEach(r=>{const k=r.Status||'Sin estado';stC[k]=(stC[k]||0)+1;});
+  const stSorted=Object.entries(stC).sort((a,b)=>b[1]-a[1]);
+  const stL=stSorted.map(e=>e[0]), stV=stSorted.map(e=>e[1]);
+  // Color semántico: despachado=calipso, en anden/picking=gris, alertas=rojo
+  const stColor=stL.map(s=>{
+    const u=s.toUpperCase();
+    if(u.includes('DESPACH')||u.includes('ANDEN'))return C_CAL;
+    if(u.includes('FACTUR')||u.includes('EMIT')||u.includes('VAS'))return C_CAL_M;
+    if(u.includes('PICKING')||u.includes('DISTRO')||u.includes('PRE'))return C_GRAY;
+    return C_RED;
+  });
   dC('est');
-  S.charts.est=new Chart(document.getElementById('ch-estado'),{type:'doughnut',
-    data:{labels:stL,datasets:[{data:stL.map(k=>stC[k]),backgroundColor:stCol.slice(0,stL.length),borderWidth:2,borderColor:'#fff'}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
-      plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#2D6070',padding:8,boxWidth:10}}}}
+  S.charts.est=new Chart(document.getElementById('ch-estado'),{
+    type:'bar',
+    data:{labels:stL,datasets:[{
+      label:'OCs',data:stV,
+      backgroundColor:stColor,
+      borderRadius:{topRight:6,bottomRight:6},
+      borderSkipped:'left',
+      barPercentage:.65
+    }]},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{...TTP,callbacks:{
+          title:ctx=>'Estado: '+ctx[0].label,
+          label:ctx=>'OCs: '+ctx.raw+' ('+Math.round(ctx.raw/S.rows.length*100)+'%)'
+        }},
+        datalabels:{anchor:'end',align:'right',color:'#2D6070',font:{size:10,weight:'bold'},formatter:v=>v}
+      },
+      scales:{
+        x:{display:false,grid:{display:false}},
+        y:{grid:{display:false},ticks:{...TICK},border:{display:false}}
+      },
+      layout:{padding:{right:30}}
+    }
   });
 
-  const fM={}; S.rows.forEach(r=>{if(r.Fecha)fM[r.Fecha]=(fM[r.Fecha]||0)+1;});
+  // ── 4. CANAL — Barra apilada 100% por departamento ───────────────
+  const depsAll=Object.keys(dm);
+  const cadData=depsAll.map(d=>{
+    const ocs=S.rows.filter(r=>r.Dep===d);
+    const total=ocs.length; if(!total)return 0;
+    return Math.round(ocs.filter(r=>r.Tipo==='Cadena').length/total*100);
+  });
+  const ecoData=depsAll.map((_,i)=>100-cadData[i]);
+  dC('tipo');
+  S.charts.tipo=new Chart(document.getElementById('ch-tipo'),{
+    type:'bar',
+    data:{
+      labels:depsAll,
+      datasets:[
+        {label:'Cadena',data:cadData,backgroundColor:C_CAL,borderRadius:0,stack:'canal',barPercentage:.65},
+        {label:'Ecommerce',data:ecoData,backgroundColor:'#444441',borderRadius:0,stack:'canal',barPercentage:.65}
+      ]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{font:{size:10},color:'#2D6070',boxWidth:10,usePointStyle:true}},
+        tooltip:{...TTP,callbacks:{
+          title:ctx=>'Depto: '+ctx[0].label,
+          label:ctx=>ctx.dataset.label+': '+ctx.raw+'%'
+        }}
+      },
+      scales:{
+        x:{stacked:true,min:0,max:100,grid:GRID,ticks:{...TICK,callback:v=>v+'%'},border:{display:false}},
+        y:{stacked:true,grid:{display:false},ticks:TICK,border:{display:false}}
+      }
+    }
+  });
+
+  // ── 5. RANKING DPTO — barras horizontales Monto Liberado ─────────
+  const libSorted=Object.entries(dm).sort((a,b)=>b[1].dA-a[1].dA);
+  const libLabs=libSorted.map(e=>e[0]);
+  const libVals=libSorted.map(e=>e[1].dA);
+  const maxLib=Math.max(...libVals,1);
+  dC('mlib');
+  S.charts.mlib=new Chart(document.getElementById('ch-mlib'),{
+    type:'bar',
+    data:{labels:libLabs,datasets:[{
+      label:'Monto Liberado',data:libVals,
+      backgroundColor:libVals.map(v=>{
+        const p=v/maxLib;
+        return p>=.7?C_CAL:p>=.4?C_CAL_M:C_GRAY_L;
+      }),
+      borderRadius:{topRight:6,bottomRight:6},borderSkipped:'left',barPercentage:.65
+    }]},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{...TTP,callbacks:{
+          title:ctx=>'Depto: '+ctx[0].label,
+          label:ctx=>'Liberado: $'+Math.round(ctx.raw/1e6).toLocaleString('es-CL')+'M'
+        }}
+      },
+      scales:{
+        x:{display:false,grid:{display:false}},
+        y:{grid:{display:false},ticks:{...TICK},border:{display:false}}
+      },
+      layout:{padding:{right:60}},
+      plugins:{
+        afterDatasetsDraw(chart){
+          const {ctx,data}=chart;
+          chart.getDatasetMeta(0).data.forEach((bar,i)=>{
+            const v=data.datasets[0].data[i];
+            ctx.save();ctx.fillStyle='#2D6070';ctx.font='bold 10px sans-serif';ctx.textAlign='left';
+            ctx.fillText('$'+Math.round(v/1e6)+'M',bar.x+5,bar.y+4);
+            ctx.restore();
+          });
+        }
+      }
+    }
+  });
+
+  // ── 6. OC POR FECHA — línea con puntos ───────────────────────────
+  const fM={};
+  S.rows.forEach(r=>{if(r.Fecha)fM[r.Fecha]=(fM[r.Fecha]||0)+1;});
   const fL=Object.keys(fM).sort();
   dC('fecha');
-  S.charts.fecha=new Chart(document.getElementById('ch-fecha'),{type:'bar',
-    data:{labels:fL.map(fmtD),datasets:[{data:fL.map(f=>fM[f]),backgroundColor:'rgba(167,139,250,.75)',borderRadius:5}]},
-    options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,ticks:{stepSize:1,font:{size:10},color:'#6899A5'}}}}
-  });
-
-  dC('mlib');
-  S.charts.mlib=new Chart(document.getElementById('ch-mlib'),{type:'bar',
-    data:{labels:labs,datasets:[{data:labs.map(d=>dm[d].dA),backgroundColor:labs.map((_,i)=>PAL[i%PAL.length]),borderRadius:5}]},
-    options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,ticks:{callback:v=>'$'+Math.round(v/1e6)+'M',font:{size:10},color:'#6899A5'}}}}
-  });
-
-  const cad=S.rows.filter(r=>r.Tipo==='Cadena').length, eco=S.rows.filter(r=>r.Tipo==='Ecommerce').length;
-  dC('tipo');
-  S.charts.tipo=new Chart(document.getElementById('ch-tipo'),{type:'doughnut',
-    data:{labels:['Cadena','Ecommerce','Sin clasif.'],
-      datasets:[{data:[cad,eco,S.rows.length-cad-eco],backgroundColor:['rgba(39,191,191,.8)','rgba(217,100,136,.8)','rgba(200,200,200,.5)'],borderWidth:2,borderColor:'#fff'}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
-      plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#2D6070',padding:8,boxWidth:10}}}}
+  S.charts.fecha=new Chart(document.getElementById('ch-fecha'),{
+    type:'line',
+    data:{labels:fL.map(fmtD),datasets:[{
+      label:'OCs',data:fL.map(f=>fM[f]),
+      borderColor:C_CAL,borderWidth:2.5,
+      pointBackgroundColor:C_CAL,pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:6,pointHoverRadius:8,
+      fill:true,
+      backgroundColor:'rgba(39,191,191,.08)',
+      tension:.35
+    }]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{...TTP,callbacks:{
+          title:ctx=>'Fecha: '+ctx[0].label,
+          label:ctx=>'OCs: '+ctx.raw
+        }}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{...TICK,maxRotation:40},border:{display:false}},
+        y:{min:0,grid:GRID,ticks:{...TICK,stepSize:1},border:{display:false}}
+      }
+    }
   });
 }
 
