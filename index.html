@@ -878,7 +878,8 @@ async function detectFileType(file){
 
   // 2) Por contenido (leer encabezados de la primera fila)
   try{
-    const rows=await readXL(file);
+    // Read only first row for detection (much faster than full file)
+    const rows=await readXL(file,null,1);
     if(!rows.length) return null;
     const keys=Object.keys(rows[0]).map(k=>k.toLowerCase());
     const has=(...cands)=>cands.some(c=>keys.some(k=>k.includes(c)));
@@ -957,17 +958,22 @@ async function handleDroppedFiles(files){
 }
 
 
-function readXL(file,sheet){
+function readXL(file,sheet,maxRows){
   return new Promise(res=>{
     const r=new FileReader();
     r.onload=e=>{
-      try{
-        const wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
-        const ws=sheet?(wb.Sheets[sheet]||wb.Sheets[wb.SheetNames[0]]):wb.Sheets[wb.SheetNames[0]];
-        res(XLSX.utils.sheet_to_json(ws,{defval:''}));
-      }catch{res([]);}
+      // Defer XLSX parsing to next tick so browser stays responsive
+      setTimeout(()=>{
+        try{
+          const opts={type:'array',cellDates:true};
+          if(maxRows) opts.sheetRows=maxRows+1;
+          const wb=XLSX.read(new Uint8Array(e.target.result),opts);
+          const ws=sheet?(wb.Sheets[sheet]||wb.Sheets[wb.SheetNames[0]]):wb.Sheets[wb.SheetNames[0]];
+          res(XLSX.utils.sheet_to_json(ws,{defval:''}));
+        }catch(err){console.warn('readXL error:',err);res([]);}
+      },10);
     };
-    r.readAsBinaryString(file);
+    r.readAsArrayBuffer(file);
   });
 }
 
@@ -978,16 +984,18 @@ async function processFiles(){
   log.style.display='block'; log.textContent='⏳ Leyendo archivos...';
 
   const isFala = CLIENTE === 'FALABELLA';
-  const[olData,soData,dlData,qbData,resData]=await Promise.all([
-    S.files.ol?readXL(S.files.ol):Promise.resolve([]),
-    S.files.so?readXL(S.files.so):Promise.resolve([]),
-    // Falabella: DATA_OL (hoja única); Paris: hoja 'data_logistica'
-    S.files.pr?readXL(S.files.pr,isFala?null:'data_logistica'):Promise.resolve([]),
-    S.files.qb?readXL(S.files.qb):Promise.resolve([]),
-    // Falabella: leer FALA_RESUMEN del mismo archivo GOWH → CANAL y ESTADO por OC
-    Promise.resolve([]), // resData: FALA_RESUMEN no disponible en archivos separados
-  ]);
+  // Read files sequentially to keep browser responsive (not parallel)
+  log.textContent='⏳ Leyendo archivo 1/4...';
+  const olData = S.files.ol ? await readXL(S.files.ol) : [];
+  log.textContent='⏳ Leyendo archivo 2/4...';
+  const soData = S.files.so ? await readXL(S.files.so) : [];
+  log.textContent='⏳ Leyendo archivo 3/4...';
+  const dlData = S.files.pr ? await readXL(S.files.pr, isFala?null:'data_logistica') : [];
+  log.textContent='⏳ Leyendo archivo 4/4...';
+  const qbData = S.files.qb ? await readXL(S.files.qb) : [];
+  const resData = [];
 
+  await new Promise(r=>setTimeout(r,0)); // yield to browser
   log.textContent=`✓ ${isFala?'GOWH':'OL'}:${olData.length} SO:${soData.length} ${isFala?'DATA_OL':'DataLog'}:${dlData.length} ${isFala?'B2B':'Quiebres'}:${qbData.length}${resData.length?' RESUMEN:'+resData.length:''}. Procesando...`;
 
   // ── SO Track por PO Number ──
@@ -995,6 +1003,8 @@ async function processFiles(){
   // Deduplicar SO Track por Delivery Number para evitar doble conteo
   // (el SO Track repite el Delivered Amount en filas de detalle sin Ordered Qty)
   const soSeen=new Set();
+  log.textContent='⏳ Procesando SO Track...';
+  await new Promise(r=>setTimeout(r,0));
   soData.forEach(r=>{
     const po=String(r['PO Number']||'').split('.')[0].trim(); if(!po)return;
     if(!soMap[po])soMap[po]={soldTo:'',oQ:0,oA:0,dQ:0,dA:0,iQ:0,iA:0,gs:new Set()};
@@ -1034,6 +1044,8 @@ async function processFiles(){
   const findDLKey=(cands)=>dlKeys.find(k=>cands.some(c=>k.toLowerCase().includes(c.toLowerCase())))||null;
   const kUnidLocal=findDLKey(['unid_solic','unid solic','unidades solicitadas','unidad solicitada','cant solicitada','cantidad solicitada','unidades','cantidad','qty']);
 
+  log.textContent='⏳ Procesando DATA_OL...';
+  await new Promise(r=>setTimeout(r,0));
   const dlMap={};
   dlData.forEach(r=>{
     const oc=String(r['O/C Cliente']||'').split('.')[0].trim(); if(!oc)return;
@@ -1102,6 +1114,8 @@ async function processFiles(){
   });
 
   // ── OL → construir filas ──
+  log.textContent='⏳ Procesando GOWH...';
+  await new Promise(r=>setTimeout(r,0));
   const olByOC={};
   olData.forEach(r=>{
     const oc=String(r['Num Order']||'').trim(); if(!oc)return;
@@ -1184,21 +1198,34 @@ async function processFiles(){
       const kSol=Object.keys(_qbSample).find(k=>k.toLowerCase()==='solicitado')||'Solicitado';
       const kRec=Object.keys(_qbSample).find(k=>k.toLowerCase()==='recibido')||'Recibido';
       const kEst=Object.keys(_qbSample).find(k=>k.toLowerCase()==='estado')||'Estado';
-      qbData.forEach(r=>{
-        const oc=String(r[kOC]||'').split('.')[0].trim(); if(!oc)return;
-        const sol=Number(r[kSol])||0; if(!sol)return;
-        const rec=Number(r[kRec])||0;
-        const qb=Math.max(sol-rec,0);
-        const localE=String(r[kLE]||'').toUpperCase();
-        S.qbParisRows.push({
-          OC:oc, Dep:String(r[kDep]||'—'),
-          LocalD:String(r[kLD]||'—'), LocalE:String(r[kLE]||'—'),
-          Canal:localE.includes('OMNI')?'Ecommerce':'Cadena',
-          Cod:String(r[kCod]||''), Desc:String(r[kDesc]||''),
-          Sol:sol, Rec:rec, Quiebre:qb,
-          Estado:String(r[kEst]||''),
-          FR:sol>0?Math.round(rec/sol*100):0
-        });
+      // Process in chunks to avoid blocking UI (40k rows)
+      await new Promise(resolve=>{
+        let i=0;
+        const CHUNK=2000;
+        function processChunk(){
+          const end=Math.min(i+CHUNK,qbData.length);
+          for(;i<end;i++){
+            const r=qbData[i];
+            const oc=String(r[kOC]||'').split('.')[0].trim(); if(!oc)continue;
+            const sol=Number(r[kSol])||0; if(!sol)continue;
+            const rec=Number(r[kRec])||0;
+            const qb=Math.max(sol-rec,0);
+            const localE=String(r[kLE]||'').toUpperCase();
+            S.qbParisRows.push({
+              OC:oc, Dep:String(r[kDep]||'—'),
+              LocalD:String(r[kLD]||'—'), LocalE:String(r[kLE]||'—'),
+              Canal:localE.includes('OMNI')?'Ecommerce':'Cadena',
+              Cod:String(r[kCod]||''), Desc:String(r[kDesc]||''),
+              Sol:sol, Rec:rec, Quiebre:qb,
+              Estado:String(r[kEst]||''),
+              FR:sol>0?Math.round(rec/sol*100):0
+            });
+          }
+          log.textContent='⏳ Procesando quiebres París... '+Math.round(i/qbData.length*100)+'%';
+          if(i<qbData.length) setTimeout(processChunk,0);
+          else resolve();
+        }
+        processChunk();
       });
       set('bdg-qb',S.qbParisRows.filter(r=>r.Quiebre>0).length||'0');
     }
