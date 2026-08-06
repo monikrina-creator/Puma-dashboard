@@ -707,15 +707,6 @@ function selectClient(c){
   S.rows=[];S.qbRows=[];S.qbCodRows=[];S.overrides={};
   // Render upload panel for this client
   renderUploadPanel();
-  // Update sidebar labels
-  const _chip=document.getElementById('cli-chip-nm');
-  if(_chip)_chip.textContent=c==='FALABELLA'?'Falabella':'Cencosud París';
-  const _dashSub=document.getElementById('dash-sub-client');
-  if(_dashSub)_dashSub.textContent=c==='FALABELLA'?'Falabella':'Cencosud París';
-  const _lblCad=document.getElementById('lbl-cadena');
-  if(_lblCad)_lblCad.textContent=c==='FALABELLA'?'Tiendas':'Predistribuidas';
-  const _nvqb=document.getElementById('nv-quiebres');
-  if(_nvqb)_nvqb.style.display=c==='PARIS'?'':'none';
   // Navigate to upload
   goPage('upload');
 }
@@ -877,7 +868,7 @@ async function detectFileType(file){
 
   // 2) Por contenido (leer encabezados de la primera fila)
   try{
-    const rows=await readXL(file,null,1);
+    const rows=await readXL(file);
     if(!rows.length) return null;
     const keys=Object.keys(rows[0]).map(k=>k.toLowerCase());
     const has=(...cands)=>cands.some(c=>keys.some(k=>k.includes(c)));
@@ -956,22 +947,17 @@ async function handleDroppedFiles(files){
 }
 
 
-function readXL(file,sheet,maxRows){
+function readXL(file,sheet){
   return new Promise(res=>{
     const r=new FileReader();
     r.onload=e=>{
-      // Defer heavy XLSX parsing to next tick so browser stays responsive
-      setTimeout(()=>{
-        try{
-          const opts={type:'array',cellDates:true};
-          if(maxRows) opts.sheetRows=maxRows+1;
-          const wb=XLSX.read(new Uint8Array(e.target.result),opts);
-          const ws=sheet?(wb.Sheets[sheet]||wb.Sheets[wb.SheetNames[0]]):wb.Sheets[wb.SheetNames[0]];
-          res(XLSX.utils.sheet_to_json(ws,{defval:''}));
-        }catch(err){console.warn('readXL error:',err);res([]);}
-      },10);
+      try{
+        const wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+        const ws=sheet?(wb.Sheets[sheet]||wb.Sheets[wb.SheetNames[0]]):wb.Sheets[wb.SheetNames[0]];
+        res(XLSX.utils.sheet_to_json(ws,{defval:''}));
+      }catch{res([]);}
     };
-    r.readAsArrayBuffer(file);
+    r.readAsBinaryString(file);
   });
 }
 
@@ -982,16 +968,15 @@ async function processFiles(){
   log.style.display='block'; log.textContent='⏳ Leyendo archivos...';
 
   const isFala = CLIENTE === 'FALABELLA';
-  // Sequential reads with progress — prevents "page not responding"
-  log.textContent='⏳ Leyendo archivo 1/4...';
-  const olData = S.files.ol ? await readXL(S.files.ol) : [];
-  log.textContent='⏳ Leyendo archivo 2/4...';
-  const soData = S.files.so ? await readXL(S.files.so) : [];
-  log.textContent='⏳ Leyendo archivo 3/4...';
-  const dlData = S.files.pr ? await readXL(S.files.pr, isFala?null:'data_logistica') : [];
-  log.textContent='⏳ Leyendo archivo 4/4...';
-  const qbData = S.files.qb ? await readXL(S.files.qb) : [];
-  const resData = [];
+  const[olData,soData,dlData,qbData,resData]=await Promise.all([
+    S.files.ol?readXL(S.files.ol):Promise.resolve([]),
+    S.files.so?readXL(S.files.so):Promise.resolve([]),
+    // Falabella: DATA_OL (hoja única); Paris: hoja 'data_logistica'
+    S.files.pr?readXL(S.files.pr,isFala?null:'data_logistica'):Promise.resolve([]),
+    S.files.qb?readXL(S.files.qb):Promise.resolve([]),
+    // Falabella: leer FALA_RESUMEN del mismo archivo GOWH → CANAL y ESTADO por OC
+    Promise.resolve([]), // resData: FALA_RESUMEN no disponible en archivos separados
+  ]);
 
   log.textContent=`✓ ${isFala?'GOWH':'OL'}:${olData.length} SO:${soData.length} ${isFala?'DATA_OL':'DataLog'}:${dlData.length} ${isFala?'B2B':'Quiebres'}:${qbData.length}${resData.length?' RESUMEN:'+resData.length:''}. Procesando...`;
 
