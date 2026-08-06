@@ -960,16 +960,23 @@ function readXL(file,sheet,maxRows){
   return new Promise(res=>{
     const r=new FileReader();
     r.onload=e=>{
-      // Defer heavy XLSX parsing to next tick so browser stays responsive
+      // Use multiple yielding timeouts to prevent "page not responding"
+      // Each yield gives the browser time to handle events
       setTimeout(()=>{
         try{
-          const opts={type:'array',cellDates:true};
+          const opts={type:'array',cellDates:true,dense:false};
           if(maxRows) opts.sheetRows=maxRows+1;
-          const wb=XLSX.read(new Uint8Array(e.target.result),opts);
-          const ws=sheet?(wb.Sheets[sheet]||wb.Sheets[wb.SheetNames[0]]):wb.Sheets[wb.SheetNames[0]];
-          res(XLSX.utils.sheet_to_json(ws,{defval:''}));
-        }catch(err){console.warn('readXL error:',err);res([]);}
-      },10);
+          const buf=new Uint8Array(e.target.result);
+          const wb=XLSX.read(buf,opts);
+          setTimeout(()=>{
+            try{
+              const ws=sheet?(wb.Sheets[sheet]||wb.Sheets[wb.SheetNames[0]]):wb.Sheets[wb.SheetNames[0]];
+              const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+              res(rows);
+            }catch{res([]);}
+          },0);
+        }catch(err){console.warn('readXL:',err);res([]);}
+      },20);
     };
     r.readAsArrayBuffer(file);
   });
@@ -982,16 +989,38 @@ async function processFiles(){
   log.style.display='block'; log.textContent='⏳ Leyendo archivos...';
 
   const isFala = CLIENTE === 'FALABELLA';
-  // Sequential reads with progress — prevents "page not responding"
-  log.textContent='⏳ Leyendo archivo 1/4...';
+  // Helper: yield to browser between heavy operations
+  const yld=()=>new Promise(r=>setTimeout(r,50));
+  
+  // Show full-screen loading to prevent "page not responding" panic
+  const _lov=document.createElement('div');
+  _lov.id='loading-overlay';
+  _lov.style.cssText='position:fixed;inset:0;background:rgba(244,248,249,.95);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+  _lov.innerHTML='<div style="width:48px;height:48px;border:4px solid var(--cal-l);border-top-color:var(--cal);border-radius:50%;animation:spin .8s linear infinite"></div><div id="load-msg" style="font-size:14px;font-weight:600;color:var(--tx2)">Leyendo archivos...</div><div style="font-size:12px;color:var(--tx3);max-width:300px;text-align:center">Este proceso puede tomar 20-60 segundos. Por favor espera sin cerrar la página.</div>';
+  if(!document.getElementById('loading-overlay')) document.body.appendChild(_lov);
+  if(!document.getElementById('spin-style')){const st=document.createElement('style');st.id='spin-style';st.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(st);}
+  const setLoadMsg=t=>{const m=document.getElementById('load-msg');if(m)m.textContent=t;};
+
+  await yld();
+  setLoadMsg('📂 Leyendo archivo 1/4 — GOWH...');
+  await yld();
   const olData = S.files.ol ? await readXL(S.files.ol) : [];
-  log.textContent='⏳ Leyendo archivo 2/4...';
+  await yld();
+  setLoadMsg('📂 Leyendo archivo 2/4 — SOTRACK...');
+  await yld();
   const soData = S.files.so ? await readXL(S.files.so) : [];
-  log.textContent='⏳ Leyendo archivo 3/4...';
+  await yld();
+  setLoadMsg('📂 Leyendo archivo 3/4 — DATA_OL...');
+  await yld();
   const dlData = S.files.pr ? await readXL(S.files.pr, isFala?null:'data_logistica') : [];
-  log.textContent='⏳ Leyendo archivo 4/4...';
+  await yld();
+  setLoadMsg('📂 Leyendo archivo 4/4 — B2B...');
+  await yld();
   const qbData = S.files.qb ? await readXL(S.files.qb) : [];
   const resData = [];
+  await yld();
+  setLoadMsg('⚙️ Procesando datos...');
+  await yld();
 
   log.textContent=`✓ ${isFala?'GOWH':'OL'}:${olData.length} SO:${soData.length} ${isFala?'DATA_OL':'DataLog'}:${dlData.length} ${isFala?'B2B':'Quiebres'}:${qbData.length}${resData.length?' RESUMEN:'+resData.length:''}. Procesando...`;
 
@@ -1258,7 +1287,9 @@ async function processFiles(){
 
   buildKPIs(); buildCalendar(); buildDeptos();
   goPage('dashboard');
-  setTimeout(buildCharts, 80); // charts need visible DOM to render
+  setTimeout(buildCharts, 80);
+  // Remove loading overlay
+  const _rm=document.getElementById('loading-overlay');if(_rm)_rm.remove(); // charts need visible DOM to render
 
   // Guardar automáticamente en el navegador
   saveToStorage();
