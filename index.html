@@ -233,6 +233,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 .st{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap}
 .st-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .s-DESPACHADO{background:#D8F7EC;color:#0D6B42}.s-DESPACHADO .st-dot{background:#0D6B42}
+.s-ENTREGADO{background:#D8F7EC;color:#0D6B42}.s-ENTREGADO .st-dot{background:#0D6B42}
 .s-EN_PICKING{background:var(--am-l);color:var(--am-d)}.s-EN_PICKING .st-dot{background:var(--am)}
 .s-VAS_DISTRO{background:var(--cal-l);color:var(--cal-d)}.s-VAS_DISTRO .st-dot{background:var(--cal)}
 .s-PRE_DESPACHO{background:var(--sky);color:var(--sky-d)}.s-PRE_DESPACHO .st-dot{background:var(--sky-d)}
@@ -567,7 +568,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">INVOICE_AMOUNT</div><div class="kpi-v xs" id="k-mfact">—</div><div class="kpi-sub">Monto Facturado</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--am),#C8780A)"></div><div class="kpi-lbl">OC Pendientes</div><div class="kpi-v" id="k-pend">—</div><div class="kpi-tr wn" id="tr-pend">● —</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">OC DESPACHADAS</div><div class="kpi-v" id="k-recib">—</div><div class="kpi-tr up" id="tr-recib">● —</div></div>
-      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal))"></div><div class="kpi-lbl">TIENDAS</div><div class="kpi-v" id="k-cad">—</div><div class="kpi-sub">OC a Tiendas/Ecommerce</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal))"></div><div class="kpi-lbl">TIENDAS</div><div class="kpi-v" id="k-cad">—</div><div class="kpi-sub">OC Tiendas</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rose-m),var(--rose-dp))"></div><div class="kpi-lbl">ECOMMERCE</div><div class="kpi-v" id="k-eco">—</div><div class="kpi-sub">OC a Internet</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rd),#A01010)"></div><div class="kpi-lbl">Rechazo Parcial</div><div class="kpi-v" id="k-rechazo">—</div><div class="kpi-tr dn" id="tr-rechazo">● —</div></div>
     <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--pu),#5C3CE0)"></div><div class="kpi-lbl">LEAD TIME PROM.</div><div class="kpi-v" id="k-lt-avg">—</div><div class="kpi-sub">días prom. despacho</div></div>
@@ -1541,9 +1542,13 @@ function buildCharts(){
 
   // ── 2. LEAD TIME BULLET ───────────────────────────────────────────
   // OC con lead time, ordenadas, coloreadas rojo si >7 días
-  const ltRows=S.rows.filter(r=>r.LeadTime!=null).sort((a,b)=>b.LeadTime-a.LeadTime).slice(0,15);
+  const ltRows=S.rows.filter(r=>r.LeadTime!=null).sort((a,b)=>b.LeadTime-a.LeadTime);
   dC('lt');
   if(document.getElementById('ch-leadtime')&&ltRows.length){
+    const ltWrap=document.getElementById('ch-leadtime').parentElement;
+    const ltH=Math.min(700,Math.max(260,ltRows.length*20));
+    ltWrap.style.height=ltH+'px';
+    ltWrap.style.overflowY=ltRows.length*20>700?'auto':'hidden';
     S.charts.lt=new Chart(document.getElementById('ch-leadtime'),{
       type:'bar',
       data:{
