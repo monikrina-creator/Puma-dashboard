@@ -559,12 +559,12 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal-d))"></div><div class="kpi-lbl">Total OC</div><div class="kpi-v" id="k-oc">—</div><div class="kpi-sub">órdenes activas</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--sky-m),var(--sky-d))"></div><div class="kpi-lbl">Fill Rate Liberado</div><div class="g-wrap"><svg width="44" height="44" viewBox="0 0 44 44"><circle class="g-track" cx="22" cy="22" r="17"/><circle class="g-fill" id="g1" cx="22" cy="22" r="17" stroke="var(--cal)" stroke-dasharray="106.8" stroke-dashoffset="106.8" transform="rotate(-90 22 22)"/></svg><div><div class="kpi-v sm" id="k-fr1">—%</div><div class="kpi-sub">Col X ÷ L</div></div></div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rose-m),var(--rose-dp))"></div><div class="kpi-lbl">Fill Rate Facturado</div><div class="g-wrap"><svg width="44" height="44" viewBox="0 0 44 44"><circle class="g-track" cx="22" cy="22" r="17"/><circle class="g-fill" id="g2" cx="22" cy="22" r="17" stroke="var(--rose-dp)" stroke-dasharray="106.8" stroke-dashoffset="106.8" transform="rotate(-90 22 22)"/></svg><div><div class="kpi-v sm" id="k-fr2">—%</div><div class="kpi-sub">Col AB ÷ L</div></div></div></div>
-      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal))"></div><div class="kpi-lbl">Monto Ingresado</div><div class="kpi-v xs" id="k-ming">—</div><div class="kpi-sub">Col U · Órdenes Liberadas</div></div>
-      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--pu),#7C3AED)"></div><div class="kpi-lbl">Monto Liberado</div><div class="kpi-v xs" id="k-mlib">—</div><div class="kpi-sub">Delivered Amount</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal))"></div><div class="kpi-lbl">ORDER_AMOUNT</div><div class="kpi-v xs" id="k-ming">—</div><div class="kpi-sub">Total de GOWH</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--pu),#7C3AED)"></div><div class="kpi-lbl">RELEASED_AMOUNT</div><div class="kpi-v xs" id="k-mlib">—</div><div class="kpi-sub">RELEASED_AMOUNT</div></div>
     </div>
     <!-- KPI ROW 2 -->
     <div class="kpi-grid kr5">
-      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">Monto Facturado</div><div class="kpi-v xs" id="k-mfact">—</div><div class="kpi-sub">Invoiced Amount</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">INVOICE_AMOUNT</div><div class="kpi-v xs" id="k-mfact">—</div><div class="kpi-sub">INVOICE_AMOUNT</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--am),#C8780A)"></div><div class="kpi-lbl">OC Pendientes</div><div class="kpi-v" id="k-pend">—</div><div class="kpi-tr wn" id="tr-pend">● —</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">OC Recibidas</div><div class="kpi-v" id="k-recib">—</div><div class="kpi-tr up" id="tr-recib">● —</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal))"></div><div class="kpi-lbl">Predistribuidas</div><div class="kpi-v" id="k-cad">—</div><div class="kpi-sub">OC a tiendas</div></div>
@@ -617,7 +617,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
     <div class="ch2" style="margin-bottom:16px">
       <div class="chcard">
         <div class="ch-hd"><div>
-          <div class="ch-title">Ranking Departamentos — Monto Liberado</div>
+          <div class="ch-title">Ranking Departamentos — RELEASED_AMOUNT</div>
           <div class="ch-sub">Barras horizontales ordenadas · CLP</div>
         </div></div>
         <div class="ch-wrap" style="height:220px"><canvas id="ch-mlib" role="img" aria-label="Ranking departamentos monto liberado"></canvas></div>
@@ -730,7 +730,7 @@ function renderUploadPanel(){
     grid.innerHTML=`
       <div class="up-card" id="card-ol" onclick="document.getElementById('f-gowh').click()">
         <div class="up-num">Archivo 1 — requerido</div><div class="up-ct">DATA_GOWH</div>
-        <div class="up-cd">OC · Monto Ingresado · Unidades · Depto · PD</div>
+        <div class="up-cd">OC · ORDER_AMOUNT · Unidades · Depto · PD</div>
         <div class="up-cf" id="nm-ol"></div>
         <div class="up-chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
         <input type="file" id="f-gowh" accept=".xlsx,.xls" onchange="handleFile(this,'ol')">
@@ -744,7 +744,7 @@ function renderUploadPanel(){
       </div>
       <div class="up-card" id="card-qb" onclick="document.getElementById('f-b2b').click()">
         <div class="up-num">Archivo 3 — requerido</div><div class="up-ct">DATA_B2B</div>
-        <div class="up-cd">DELIVERY_DATE · DELIVERY_TIME · OPERATING_STATUS · INVOICE_NUMBER</div>
+        <div class="up-cd">DELIVERY_DATE · DELIVERY_TIME · OPERATING_STATUS · SUBLINEA</div>
         <div class="up-cf" id="nm-qb"></div>
         <div class="up-chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
         <input type="file" id="f-b2b" accept=".xlsx,.xls" onchange="handleFile(this,'qb')">
@@ -752,8 +752,8 @@ function renderUploadPanel(){
     guide.innerHTML=`
       <div class="sec-lbl" style="margin-bottom:10px">Guía de archivos — Falabella</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;font-size:11px;color:var(--tx3)">
-        <div><strong style="color:var(--cal-d);display:block;margin-bottom:6px">📄 DATA_GOWH</strong>Num Order → OC<br>SAP Code → código producto<br>Departamento → área<br>PD → FOOTWEAR / APPAREL<br><strong>Total → Monto Ingresado</strong><br><strong>Unidades → Unid. Ingresadas</strong></div>
-        <div><strong style="color:var(--cal-d);display:block;margin-bottom:6px">📄 DATA_SOTRACK</strong>PO Number → cruza con OC<br>Col L: Ordered Quantity<br>Col X: Delivered Quantity<br>Col Y: Delivered Amount<br>Col AB: Invoiced Quantity<br>Col AC: Invoiced Amount<br>Col AD: Gsuite (últimos 6)</div>
+        <div><strong style="color:var(--cal-d);display:block;margin-bottom:6px">📄 DATA_GOWH</strong>Num Order → OC<br>SAP Code → código producto<br>Departamento → área<br>PD → FOOTWEAR / APPAREL<br><strong>Total → ORDER_AMOUNT</strong><br><strong>Unidades → Unid. Ingresadas</strong></div>
+        <div><strong style="color:var(--cal-d);display:block;margin-bottom:6px">📄 DATA_SOTRACK</strong>PO Number → cruza con OC<br>Col L: Ordered Quantity<br>Col X: Delivered Quantity<br>Col Y: RELEASED_AMOUNT<br>Col AB: Invoiced Quantity<br>Col AC: INVOICE_AMOUNT<br>Col AD: Gsuite (últimos 6)</div>
         <div><strong style="color:var(--cal-d);display:block;margin-bottom:6px">📄 DATA_OL</strong>O/C Cliente → OC<br>Col Q: Status operativo<br>Col O: Fecha Entrega<br>Col Y: Local/tienda<br>Col M: División (CALZADO/ROPA)<br>INTERNET = Ecommerce</div>
         <div><strong style="color:var(--cal-d);display:block;margin-bottom:6px">📄 DATA_B2B (opcional)</strong>OC → cruza con GOWH<br>FECHA ENTREGA + HORA agenda<br>DELIVERY → número entrega<br>FACTURA → N° factura<br>CANT + DIVISION + ESTADO<br><em style="color:var(--cal-d)">Agenda diaria con horarios</em></div>
       </div>`;
@@ -790,8 +790,8 @@ function renderUploadPanel(){
     guide.innerHTML=`
       <div class="sec-lbl" style="margin-bottom:10px">Guía de archivos — Cencosud París</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;font-size:11px;color:var(--tx3)">
-        <div><strong style="color:var(--rose-dp);display:block;margin-bottom:6px">📄 Órdenes Liberadas</strong>Num Order → OC<br>SAP Code → código producto<br>Departamento → área<br>PD → punto de distribución<br><strong>Total (col U) → Monto Ingresado</strong><br><strong>Unidades → Unid. Ingresadas</strong></div>
-        <div><strong style="color:var(--rose-dp);display:block;margin-bottom:6px">📄 SO Track</strong>PO Number → cruza con OC<br>Col L: Ordered Quantity<br>Col X: Delivered Quantity<br>Col Y: Delivered Amount<br>Col AB: Invoiced Quantity<br>Col AC: Invoiced Amount<br>Col AD: Gsuite (últimos 6)</div>
+        <div><strong style="color:var(--rose-dp);display:block;margin-bottom:6px">📄 Órdenes Liberadas</strong>Num Order → OC<br>SAP Code → código producto<br>Departamento → área<br>PD → punto de distribución<br><strong>Total (col U) → ORDER_AMOUNT</strong><br><strong>Unidades → Unid. Ingresadas</strong></div>
+        <div><strong style="color:var(--rose-dp);display:block;margin-bottom:6px">📄 SO Track</strong>PO Number → cruza con OC<br>Col L: Ordered Quantity<br>Col X: Delivered Quantity<br>Col Y: RELEASED_AMOUNT<br>Col AB: Invoiced Quantity<br>Col AC: INVOICE_AMOUNT<br>Col AD: Gsuite (últimos 6)</div>
         <div><strong style="color:var(--rose-dp);display:block;margin-bottom:6px">📄 Pronóstico</strong>Hoja: data_logistica<br>O/C Cliente → OC<br>Col G: Status operativo<br>Col N: Fecha Entrega<br>Col W: Local/destino<br>CD Omnicanal = Ecommerce</div>
         <div><strong style="color:var(--rose-dp);display:block;margin-bottom:6px">📄 Quiebres (opcional)</strong>Cust. Ref. → cruza con OC<br>Material → SAP Code<br>Delivery Quantity<br>Quiebre → unidades sin entrega<br><br><em style="color:var(--rose-dp)">Archivo independiente</em></div>
       </div>`;
@@ -970,10 +970,9 @@ async function processFiles(){
   const soData = S.files.so ? await readXL(S.files.so) : [];
   log.textContent='⏳ Leyendo DATA_OL...'; await new Promise(r=>setTimeout(r,30));
   const dlData = S.files.pr ? await readXL(S.files.pr,isFala?null:'data_logistica') : [];
-  log.textContent='⏳ Leyendo B2B (datos)...'; await new Promise(r=>setTimeout(r,30));
-  const qbData = isFala&&S.files.qb ? await readXL(S.files.qb,'Hoja2') : (S.files.qb ? await readXL(S.files.qb) : []);
-  log.textContent='⏳ Leyendo B2B (sublinea)...'; await new Promise(r=>setTimeout(r,30));
-  const sublineaRaw = isFala&&S.files.qb ? await readXL(S.files.qb,'Hoja1') : [];
+  log.textContent='⏳ Leyendo B2B...'; await new Promise(r=>setTimeout(r,30));
+  const qbData = S.files.qb ? await readXL(S.files.qb) : [];
+  const sublineaRaw = [];
   const resData = [];
 
   log.textContent=`✓ ${isFala?'GOWH':'OL'}:${olData.length} SO:${soData.length} ${isFala?'DATA_OL':'DataLog'}:${dlData.length} ${isFala?'B2B':'Quiebres'}:${qbData.length}${resData.length?' RESUMEN:'+resData.length:''}. Procesando...`;
@@ -981,14 +980,14 @@ async function processFiles(){
   // ── SO Track por PO Number ──
   const soMap={};
   // Deduplicar SO Track por Delivery Number para evitar doble conteo
-  // (el SO Track repite el Delivered Amount en filas de detalle sin Ordered Qty)
+  // (el SO Track repite el RELEASED_AMOUNT en filas de detalle sin Ordered Qty)
   const soSeen=new Set();
   soData.forEach(r=>{
     const po=String(r['PO Number']||'').split('.')[0].trim(); if(!po)return;
     if(!soMap[po])soMap[po]={soldTo:'',oQ:0,oA:0,dQ:0,dA:0,iQ:0,iA:0,gs:new Set(),markForNames:new Set()};
     const s=soMap[po];
     s.soldTo=s.soldTo||(r['Sold to Name']||'');
-    // Ordered Quantity y Ordered Amount: solo en filas principales (con valor)
+    // Ordered Quantity y ORDER_AMOUNT: solo en filas principales (con valor)
     const ordQty=r['Ordered Quantity'];
     const ordQtyNum=Number(ordQty);
     if(ordQty!==''&&ordQty!==null&&ordQty!==undefined&&!isNaN(ordQtyNum)&&ordQtyNum>0){
@@ -1001,20 +1000,20 @@ async function processFiles(){
     if(delNum&&!soSeen.has(delKey)){
       soSeen.add(delKey);
       s.dQ+=Number(r['Delivered Quantity'])||0;
-      s.dA+=Number(r['Delivered Amount'])||0;
+      s.dA+=Number(r['RELEASED_AMOUNT'])||0;
       s.iQ+=Number(r['Invoiced Quantity'])||0;
-      s.iA+=Number(r['Invoiced Amount'])||0;
+      s.iA+=Number(r['INVOICE_AMOUNT'])||0;
     } else if(!delNum){
       // Sin número de entrega: sumar directamente (no hay riesgo de duplicado)
       s.dQ+=Number(r['Delivered Quantity'])||0;
-      s.dA+=Number(r['Delivered Amount'])||0;
+      s.dA+=Number(r['RELEASED_AMOUNT'])||0;
       s.iQ+=Number(r['Invoiced Quantity'])||0;
-      s.iA+=Number(r['Invoiced Amount'])||0;
+      s.iA+=Number(r['INVOICE_AMOUNT'])||0;
     }
-    const gs=String(r['Gsuite Number']||'').trim();
-    if(gs&&gs!=='0')s.gs.add(gs.slice(-6));
-    const invN=String(r['Invoice Number']||'').trim();
-    if(invN&&invN!=='0'&&invN!=='nan')s.gs.add(invN);
+    const gs=String(r['Gsuite Number']||'').replace(/[^0-9]/g,'');
+    if(gs&&gs.length>=4)s.gs.add(gs.slice(-6));
+    const invN=String(r['Invoice Number']||'').replace(/[^0-9]/g,'');
+    if(invN&&invN.length>=4)s.gs.add(invN.slice(-6));
     const mfn=String(r['Mark for Name']||'').trim().toUpperCase();
     if(mfn)s.markForNames.add(mfn);
   });
@@ -1053,7 +1052,7 @@ async function processFiles(){
       const fa=r['FECHA AGENDA'];
       let fechaStr='';
       if(fa){const dt=fa instanceof Date?fa:new Date(fa);if(!isNaN(dt))fechaStr=dt.toISOString().split('T')[0];}
-      resMap[oc]={tipo:canal==='ECOMMERCE'?'ECOMMERCE':'TIENDA',
+      resMap[oc]={tipo:canal==='ECOMMERCE'?'Ecommerce':'Cadena',
         estado:estado==='DESPACHADA'?'Mercadería recibida':'Pendiente de despacho',
         status,fecha:fechaStr};
     });
@@ -1086,17 +1085,20 @@ async function processFiles(){
     const arr=[...d.locales];
     if(isFala){
       const hasInternet=arr.some(l=>l.toUpperCase()==='INTERNET');
-      d.tipo=hasInternet?'ECOMMERCE':'TIENDA';
+      d.tipo=hasInternet?'Ecommerce':'Cadena';
     } else {
-      d.tipo=arr.length>0&&arr.every(l=>l.toUpperCase().includes('OMNI'))?'ECOMMERCE':'TIENDA';
+      d.tipo=arr.length>0&&arr.every(l=>l.toUpperCase().includes('OMNI'))?'Ecommerce':'Cadena';
     }
     d.locArr=arr;
   });
 
   // ── OL → construir filas ──
+  // Filter to OCs present in B2B (74 dispatched OCs for Falabella)
+  const b2bOCs=new Set(qbData.map(r=>String(r['OC']||'').split('.')[0].trim()).filter(Boolean));
   const olByOC={};
   olData.forEach(r=>{
     const oc=String(r['Num Order']||'').trim(); if(!oc)return;
+    if(isFala&&b2bOCs.size>0&&!b2bOCs.has(oc))return; // skip non-B2B OCs
     if(!olByOC[oc]){
       let _fc='';const _fd=r['Fecha Carga'];
       if(_fd){const _dt=_fd instanceof Date?_fd:new Date(_fd);
@@ -1106,9 +1108,15 @@ async function processFiles(){
     olByOC[oc].saps.push({sap:String(r['SAP Code']||''),sapNm:r['SAP Name']||'',uQ:Number(r['Unidades'])||0,total:montoNum(r['Total']||0)});
   });
 
-  // Sublinea map from B2B Hoja1
+  // Build sublineaMap from B2B col Y (Sublinea)
   const sublineaMap={};
-  sublineaRaw.forEach(r=>{const oc=String(r['OC']||'').split('.')[0].trim();if(oc&&r['Sublinea'])sublineaMap[oc]=String(r['Sublinea']).trim();});
+  qbData.forEach(r=>{
+    const oc=String(r['OC']||'').split('.')[0].trim();
+    if(oc&&r['Sublinea'])sublineaMap[oc]=String(r['Sublinea']).trim();
+    // Also from OC.1 column
+    const oc2=String(r['OC.1']||'').split('.')[0].trim();
+    if(oc2&&r['Sublinea']&&!sublineaMap[oc2])sublineaMap[oc2]=String(r['Sublinea']).trim();
+  });
 
   S.rows=Object.entries(olByOC).map(([oc,ol])=>{
     const so=soMap[oc]||{}; const dl=dlMap[oc]||{};
@@ -1129,7 +1137,7 @@ async function processFiles(){
     let tipo=isFala?'TIENDA':'—';
     if(isFala&&so.markForNames&&so.markForNames.size>0){
       tipo=[...so.markForNames].some(n=>n.includes('INTERNET'))?'ECOMMERCE':'TIENDA';
-    } else if(!isFala){ tipo=dl.tipo||'—'; }
+    } else if(!isFala){tipo=dl.tipo||'—';}
     // Estado: FALA_RESUMEN → auto por fecha
     const estadoAuto=(!fd||fd>TODAY)?'Pendiente de despacho':'Mercadería recibida';
 
@@ -1232,6 +1240,9 @@ async function processFiles(){
 
   // Badges
   const cad=S.rows.filter(r=>r.Tipo==='TIENDA').length;
+  const ltVals=S.rows.filter(r=>r.LeadTime!=null).map(r=>r.LeadTime);
+  const ltAvg=ltVals.length?Math.round(ltVals.reduce((a,b)=>a+b,0)/ltVals.length*10)/10:null;
+  set('k-lt-avg',ltAvg!=null?ltAvg+' días':'—');
   const eco=S.rows.filter(r=>r.Tipo==='ECOMMERCE').length;
   set('bdg-agenda',S.rows.length); set('bdg-cadena',cad); set('bdg-ecomm',eco);
   const totalQbCount=S.qbRows.length+S.qbCodRows.length;
@@ -1591,8 +1602,8 @@ function buildCharts(){
     data:{
       labels:depsAll,
       datasets:[
-        {label:'TIENDA',data:cadData,backgroundColor:C_CAL,borderRadius:0,stack:'canal',barPercentage:.65},
-        {label:'ECOMMERCE',data:ecoData,backgroundColor:'#444441',borderRadius:0,stack:'canal',barPercentage:.65}
+        {label:'Cadena',data:cadData,backgroundColor:C_CAL,borderRadius:0,stack:'canal',barPercentage:.65},
+        {label:'Ecommerce',data:ecoData,backgroundColor:'#444441',borderRadius:0,stack:'canal',barPercentage:.65}
       ]
     },
     options:{
@@ -1611,7 +1622,7 @@ function buildCharts(){
     }
   });
 
-  // ── 5. RANKING DPTO — barras horizontales Monto Liberado ─────────
+  // ── 5. RANKING DPTO — barras horizontales RELEASED_AMOUNT ─────────
   const libSorted=Object.entries(dm).sort((a,b)=>b[1].dA-a[1].dA);
   const libLabs=libSorted.map(e=>e[0]);
   const libVals=libSorted.map(e=>e[1].dA);
@@ -1620,7 +1631,7 @@ function buildCharts(){
   S.charts.mlib=new Chart(document.getElementById('ch-mlib'),{
     type:'bar',
     data:{labels:libLabs,datasets:[{
-      label:'Monto Liberado',data:libVals,
+      label:'RELEASED_AMOUNT',data:libVals,
       backgroundColor:libVals.map(v=>{
         const p=v/maxLib;
         return p>=.7?C_CAL:p>=.4?C_CAL_M:C_GRAY_L;
@@ -1729,7 +1740,7 @@ function buildTblHTML(pid,title,cc,ic){
     </div>
     <div class="tbl-wrap"><table class="mtbl"><thead><tr>
       <th>OC</th><th>Departamento</th><th>PD</th><th>SUBLINEA</th><th>CANAL</th><th>DELIVERY_DATE</th><th>OPERATING_STATUS</th>
-      <th>ORDER_QTY</th><th>DELIVERY_QTY</th><th>LEAD TIME</th><th>FR Lib</th><th>FR Fact</th><th>ORDER_AMOUNT</th><th>DELIVERED_AMOUNT</th><th>INVOICED_AMOUNT</th><th>INVOICE_NUMBER</th><th>Estado</th>
+      <th>ORDER_QTY</th><th>DELIVERY_QTY</th><th>LEAD TIME</th><th>FR Lib</th><th>FR Fact</th><th>ORDER_AMOUNT</th><th>RELEASED_AMOUNT</th><th>INVOICE_AMOUNT</th><th>INVOICE_NUMBER</th><th>Estado</th>
     </tr></thead><tbody id="tbody-${pid}"></tbody></table></div>
     <div class="tbl-foot"><span class="tbl-pg" id="pg-${pid}">—</span><div class="tbl-ex">
       <button class="btn-ex" onclick="expCSV('${pid}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
@@ -1792,7 +1803,7 @@ function renderRows(pid,rows,tot){
       <td>${r.PD}</td>
       ${isTipo?`<td>${tipo}</td>`:''}
       <td style="font-size:10px;font-weight:600;color:var(--tx3)">${r.SUBLINEA||'—'}</td>
-      <td><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${r.Tipo==='ECOMMERCE'?'var(--rose-l)':'var(--cal-l)'};color:${r.Tipo==='ECOMMERCE'?'var(--rose-d)':'var(--cal-d)'}">${r.Tipo||'—'}</span></td>
+      <td><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${r.Tipo==='ECOMMERCE'?'var(--rose-l)':' var(--cal-l)'};color:${r.Tipo==='ECOMMERCE'?'var(--rose-d)':' var(--cal-d)'}">${r.Tipo||'—'}</span></td>
       <td>${fmtD(r.Fecha)}</td>
       <td>${stPill(r.Status)}</td>
       <td>${fmt(r.oQ)}</td>
@@ -2180,9 +2191,9 @@ function buildDeptos(){
   document.getElementById('dep-grid').innerHTML=Object.entries(dm).sort((a,b)=>b[1].oA-a[1].oA).map(([name,v])=>`
     <div class="dep-card">
       <div class="dep-nm">${name}<span class="pill p-cal">${v.ocs.length} OC</span></div>
-      <div class="dep-row"><span>Monto Ingresado</span><span class="dep-v">${fmtM(v.oA)}</span></div>
-      <div class="dep-row"><span>Monto Liberado</span><span class="dep-v">${fmtM(v.dA)}</span></div>
-      <div class="dep-row"><span>Monto Facturado</span><span class="dep-v">${fmtM(v.iA)}</span></div>
+      <div class="dep-row"><span>ORDER_AMOUNT</span><span class="dep-v">${fmtM(v.oA)}</span></div>
+      <div class="dep-row"><span>RELEASED_AMOUNT</span><span class="dep-v">${fmtM(v.dA)}</span></div>
+      <div class="dep-row"><span>INVOICE_AMOUNT</span><span class="dep-v">${fmtM(v.iA)}</span></div>
       <div class="dep-row"><span>FR Liberado</span><span class="dep-v" style="color:var(--cal-d)">${v.fr1}%</span></div>
       <div class="dep-row"><span>FR Facturado</span><span class="dep-v" style="color:var(--rose-dp)">${v.fr2}%</span></div>
       <div class="dep-bar"><div class="dep-fill" style="width:${Math.round(v.oA/maxM*100)}%"></div></div>
@@ -2191,11 +2202,11 @@ function buildDeptos(){
 
 // ── EXPORTS ───────────────────────────────────────────────
 function getSrc(pid){if(pid==='cadena')return S.rows.filter(r=>r.Tipo==='TIENDA');if(pid==='ecomm')return S.rows.filter(r=>r.Tipo==='ECOMMERCE');return S.rows;}
-const HDR=['OC','Departamento','PD','Canal','Fecha Despacho','Fecha Carga GOWH','Lead Time (días)','Status','Unid. Ingreso','Unid. Liberadas','FR Liberado %','FR Facturado %','Monto Ingresado','Monto Liberado','Monto Facturado','N Factura','Estado'];
+const HDR=['OC','Departamento','PD','Canal','Fecha Despacho','Fecha Carga GOWH','Lead Time (días)','Status','Unid. Ingreso','Unid. Liberadas','FR Liberado %','FR Facturado %','ORDER_AMOUNT','RELEASED_AMOUNT','INVOICE_AMOUNT','N Factura','Estado'];
 function expCSV(pid){const src=getSrc(pid);if(!src.length)return;const rows=src.map(r=>[r.OC,r.Dep,r.PD,r.Tipo||'—',r.Fecha,r.FechaCarga||'',r.LeadTime!=null?r.LeadTime:'',r.Status,r.oQ,r.dQ,r.FR1,r.FR2,r.oA,r.dA,r.iA,r.Gs,getEst(r)]);const csv=[HDR,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');dl(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),`puma_${pid}_${TODAY}.csv`);}
 function expXL(pid){
   const src=getSrc(pid);if(!src.length)return;
-  const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'SUBLINEA':r.SUBLINEA||'—','CANAL':r.Tipo||'—','DELIVERY_DATE':r.Fecha||'','DELIVERY_TIME':r.Hora||'','OPERATING_STATUS':r.Status||'—','ORDER_AMOUNT':r.oA||0,'ORDER_QTY':r.oQ||0,'DELIVERED_AMOUNT':r.dA||0,'DELIVERY_QTY':r.dQ||0,'INVOICED_AMOUNT':r.iA||0,'INVOICE_NUMBER':r.Gs||'','FR Lib%':r.FR1,'FR Fact%':r.FR2,'LEAD_TIME_DIAS':r.LeadTime!=null?r.LeadTime:'','ESTADO':getEst(r)}));
+  const data=src.map(r=>({'OC':r.OC,'Departamento':r.Dep,'PD':r.PD,'SUBLINEA':r.SUBLINEA||'—','CANAL':r.Tipo||'—','DELIVERY_DATE':r.Fecha||'','DELIVERY_TIME':r.Hora||'','OPERATING_STATUS':r.Status||'—','ORDER_AMOUNT':r.oA||0,'ORDER_QTY':r.oQ||0,'RELEASED_AMOUNT':r.dA||0,'DELIVERY_QTY':r.dQ||0,'INVOICE_AMOUNT':r.iA||0,'INVOICE_NUMBER':r.Gs||'','FR_LIB%':r.FR1,'FR_FACT%':r.FR2,'LEAD_TIME_DIAS':r.LeadTime!=null?r.LeadTime:'','ESTADO':getEst(r)}));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Dashboard');
 
