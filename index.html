@@ -1129,13 +1129,19 @@ async function processFiles(){
   });
 
   // Build sublineaMap from B2B col Y (Sublinea)
+  // sublineaMap: col Y (sublinea/Sublinea) with OC.1 as primary key
   const sublineaMap={};
+  // Pass 1: use OC.1 as primary (the definitive OC-to-sublinea mapping)
   qbData.forEach(r=>{
+    const sub=r['sublinea']||r['Sublinea']||r['SUBLINEA']||'';
+    const oc1=String(r['OC.1']||'').split('.')[0].trim();
+    if(oc1&&oc1!=='nan'&&sub)sublineaMap[oc1]=String(sub).trim();
+  });
+  // Pass 2: OC col as fallback
+  qbData.forEach(r=>{
+    const sub=r['sublinea']||r['Sublinea']||r['SUBLINEA']||'';
     const oc=String(r['OC']||'').split('.')[0].trim();
-    if(oc&&r['Sublinea'])sublineaMap[oc]=String(r['Sublinea']).trim();
-    // Also from OC.1 column
-    const oc2=String(r['OC.1']||'').split('.')[0].trim();
-    if(oc2&&r['Sublinea']&&!sublineaMap[oc2])sublineaMap[oc2]=String(r['Sublinea']).trim();
+    if(oc&&oc!=='nan'&&sub&&!sublineaMap[oc])sublineaMap[oc]=String(sub).trim();
   });
 
   S.rows=Object.entries(olByOC).map(([oc,ol])=>{
@@ -1726,7 +1732,22 @@ function depMap(){
     dm[d].ocs.push(r.OC);dm[d].oQ+=r.oQ;dm[d].dQ+=r.dQ;dm[d].iQ+=r.iQ;
     dm[d].oA+=r.oA;dm[d].dA+=r.dA;dm[d].iA+=r.iA;
   });
-  Object.values(dm).forEach(v=>{v.fr1=v.oQ>0?Math.round(v.dQ/v.oQ*100):0;v.fr2=v.oQ>0?Math.round(v.iQ/v.oQ*100):0;});
+  // Add sublinea breakdown per department
+  S.rows.forEach(r=>{
+    const d=r.Dep, sl=r.SUBLINEA||'—'; if(!dm[d])return;
+    if(!dm[d].slMap)dm[d].slMap={};
+    if(!dm[d].slMap[sl])dm[d].slMap[sl]={oA:0,dA:0,oQ:0,dQ:0};
+    dm[d].slMap[sl].oA+=r.oA; dm[d].slMap[sl].dA+=r.dA;
+    dm[d].slMap[sl].oQ+=r.oQ; dm[d].slMap[sl].dQ+=r.dQ;
+  });
+  Object.values(dm).forEach(v=>{
+    v.fr1=v.oQ>0?Math.round(v.dQ/v.oQ*100):0;
+    v.fr2=v.oQ>0?Math.round(v.iQ/v.oQ*100):0;
+    v.sublineas=v.slMap?Object.entries(v.slMap).sort((a,b)=>b[1].oA-a[1].oA).map(([name,s])=>({
+      name, oA:s.oA, dA:s.dA,
+      fr:s.oQ>0?Math.round(s.dQ/s.oQ*100):0
+    })):[];
+  });
   return dm;
 }
 
@@ -2218,6 +2239,8 @@ function buildDeptos(){
       <div class="dep-row"><span>FR Liberado</span><span class="dep-v" style="color:var(--cal-d)">${v.fr1}%</span></div>
       <div class="dep-row"><span>FR Facturado</span><span class="dep-v" style="color:var(--rose-dp)">${v.fr2}%</span></div>
       <div class="dep-bar"><div class="dep-fill" style="width:${Math.round(v.oA/maxM*100)}%"></div></div>
+      ${v.sublineas&&v.sublineas.length?`<div class="dep-sub-title">Por sublinea</div>`+v.sublineas.map(sl=>`
+      <div class="dep-sl-row"><span class="pill p-gy" style="font-size:9px">${sl.name}</span><span style="font-size:11px;color:var(--tx2)">${fmtM(sl.oA)}</span><span style="font-size:11px;color:var(--cal-d)"> → ${fmtM(sl.dA)}</span><span class="fr ${frCls(sl.fr)}" style="margin-left:4px">${sl.fr}%</span></div>`).join(''):'${\'\''}
     </div>`).join('');
 }
 
