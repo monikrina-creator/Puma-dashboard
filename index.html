@@ -1001,15 +1001,15 @@ async function processFiles(){
     if(delNum&&!soSeen.has(delKey)){
       soSeen.add(delKey);
       s.dQ+=Number(r['Delivered Quantity'])||0;
-      s.dA+=Number(r['DELIVERED_AMOUNT'])||0;
+      s.dA+=Number(r['Delivered Amount'])||0;
       s.iQ+=Number(r['Invoiced Quantity'])||0;
-      s.iA+=Number(r['INVOICE_AMOUNT'])||0;
+      s.iA+=Number(r['Invoiced Amount'])||0;
     } else if(!delNum){
       // Sin número de entrega: sumar directamente (no hay riesgo de duplicado)
       s.dQ+=Number(r['Delivered Quantity'])||0;
-      s.dA+=Number(r['DELIVERED_AMOUNT'])||0;
+      s.dA+=Number(r['Delivered Amount'])||0;
       s.iQ+=Number(r['Invoiced Quantity'])||0;
-      s.iA+=Number(r['INVOICE_AMOUNT'])||0;
+      s.iA+=Number(r['Invoiced Amount'])||0;
     }
     const gs=String(r['Gsuite Number']||'').replace(/[^0-9]/g,'');
     if(gs&&gs.length>=4)s.gs.add(gs.slice(-6));
@@ -1727,7 +1727,7 @@ function renderTblPage(pid){
 function buildTblHTML(pid,title,cc,ic){
   const isTipo=pid==='agenda', isLoc=pid==='cadena';
   const extra1='', extra2=isLoc?'<th>Sucursales</th>':'';
-  const nc=17+(isLoc?1:0); // 17 static cols incl DELIVERY_TIME
+  const nc=17+(isLoc?1:0); // OC+Dep+PD+SUBLINEA+CANAL+DATE+TIME+STATUS+LT+oA+oQ+dA+dQ+FR+iA+INV+ESTADO
   return`<div class="tbl-card">
     <div class="tbl-bar"><span class="tbl-title">${ic} ${title}</span><div class="tbl-acts"><span class="cnt-bdg ${cc}" id="cnt-${pid}">0</span></div></div>
     <div class="filt">
@@ -1741,7 +1741,7 @@ function buildTblHTML(pid,title,cc,ic){
     </div>
     <div class="tbl-wrap"><table class="mtbl"><thead><tr>
       <th>OC</th><th>Departamento</th><th>PD</th><th>SUBLINEA</th><th>CANAL</th><th>DELIVERY_DATE</th><th>DELIVERY_TIME</th><th>OPERATING_STATUS</th>
-      <th>ORDER_QTY</th><th>DELIVERY_QTY</th><th>LEAD TIME</th><th>FR Lib</th><th>FR Fact</th><th>ORDER_AMOUNT</th><th>DELIVERED_AMOUNT</th><th>INVOICE_AMOUNT</th><th>INVOICE_NUMBER</th><th>Estado</th>
+      <th>LEAD TIME</th><th>ORDER_AMOUNT</th><th>ORDER_QTY</th><th>DELIVERED_AMOUNT</th><th>DELIVERY_QTY</th><th>FILL RATE</th><th>INVOICE_AMOUNT</th><th>INVOICE_NUMBER</th><th>ESTADO</th>
     </tr></thead><tbody id="tbody-${pid}"></tbody></table></div>
     <div class="tbl-foot"><span class="tbl-pg" id="pg-${pid}">—</span><div class="tbl-ex">
       <button class="btn-ex" onclick="expCSV('${pid}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
@@ -1807,12 +1807,13 @@ function renderRows(pid,rows,tot){
       <td>${fmtD(r.Fecha)}</td>
       <td>${r.Hora||'—'}</td>
       <td>${stPill(r.Status)}</td>
-      <td>${fmt(r.oQ)}</td>
-      <td>${fmt(r.dQ)}</td>
       <td>${fmtLT(r.LeadTime)}</td>
+      <td>${fmtM(r.oA)}</td>
+      <td>${fmt(r.oQ)}</td>
+      <td>${fmtM(r.dA)}</td>
+      <td>${fmt(r.dQ)}</td>
       <td><span class="fr ${frCls(r.FR1)}">${r.FR1}%</span></td>
-      <td><span class="fr ${frCls(r.FR2)}">${r.FR2}%</span></td>
-      <td>${fmtM(r.oA)}</td><td>${fmtM(r.dA)}</td><td>${fmtM(r.iA)}</td>
+      <td>${fmtM(r.iA)}</td>
       <td>${r.Gs||'—'}</td>
       <td><select class="est-sel ${eCls}" onchange="chgEst('${r.OC}',this)">
         <option value="Pendiente de despacho" ${est==='Pendiente de despacho'?'selected':''}>⏳ Pendiente</option>
