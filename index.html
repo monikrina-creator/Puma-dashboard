@@ -1079,18 +1079,6 @@ async function processFiles(){
         if(!b.factura&&r['FACTURA'])b.factura=String(r['FACTURA']).split('.')[0].trim();
         if(!b.division&&r['DIVISION'])b.division=String(r['DIVISION']).trim();
       });
-      // Second pass: OC.1 column for OCs not directly in col H
-      qbData.forEach(r=>{
-        const oc1=String(r['OC.1']||'').split('.')[0].trim();
-        if(!oc1||oc1==='nan')return;
-        if(!b2bMap[oc1])b2bMap[oc1]={status:'',fecha:'',hora:'',factura:'',division:''};
-        const b=b2bMap[oc1];
-        const newSt=String(r['ESTADO']||'').trim();
-        if(!b.status)b.status=newSt;
-        if(!b.fecha&&r['FECHA ENTREGA']){const dt=r['FECHA ENTREGA'] instanceof Date?r['FECHA ENTREGA']:new Date(r['FECHA ENTREGA']);if(!isNaN(dt))b.fecha=dt.toISOString().split('T')[0];}
-        if(!b.hora&&r['HORA']){const ht=r['HORA'];if(ht instanceof Date)b.hora=('0'+ht.getHours()).slice(-2)+':'+('0'+ht.getMinutes()).slice(-2);else b.hora=String(ht).substring(0,5).trim();}
-        if(!b.factura&&r['FACTURA'])b.factura=String(r['FACTURA']).split('.')[0].trim();
-      });
     }
   }
 
@@ -1107,12 +1095,13 @@ async function processFiles(){
 
   // ── OL → construir filas ──
   // Filter to OCs present in B2B (74 dispatched OCs for Falabella)
-  // Include both OC and OC.1 values in the B2B OC set
+  // Include both OC and OC_1 values in the B2B OC set
+  // (SheetJS renombra el 2do encabezado "OC" duplicado como OC_1, no OC.1)
   const b2bOCs=new Set();
   qbData.forEach(r=>{
     const oc=String(r['OC']||'').split('.')[0].trim();
     if(oc&&oc!=='nan')b2bOCs.add(oc);
-    const oc1=String(r['OC.1']||'').split('.')[0].trim();
+    const oc1=String(r['OC_1']||'').split('.')[0].trim();
     if(oc1&&oc1!=='nan')b2bOCs.add(oc1);
   });
   const olByOC={};
@@ -1128,22 +1117,21 @@ async function processFiles(){
     olByOC[oc].saps.push({sap:String(r['SAP Code']||''),sapNm:r['SAP Name']||'',uQ:Number(r['Unidades'])||0,total:montoNum(r['Total']||0)});
   });
 
-  // Build sublineaMap from B2B col Y (Sublinea)
-  // sublineaMap: col Y (sublinea/Sublinea) with OC.1 as primary key
+  // Build sublineaMap from la 2da tabla del B2B (columnas T:Z), que es la
+  // fuente única y confiable de OC→Sublinea (una fila por OC).
+  // OJO: SheetJS renombra el 2do encabezado "OC" duplicado como "OC_1"
+  // (guion bajo), NUNCA como "OC.1" (punto) — ese era el bug.
+  // No se usa la columna OC de la tabla de deliveries (A:Q) como fallback
+  // cruzando por fila, porque son dos tablas independientes con distinto
+  // orden/cantidad de filas: cruzarlas por posición asigna sublineas de
+  // OC no relacionadas.
   const sublineaMap={};
-  // Pass 1: use OC.1 as primary (the definitive OC-to-sublinea mapping)
   qbData.forEach(r=>{
-    const sub=r['sublinea']||r['Sublinea']||r['SUBLINEA']||'';
-    const _oc1raw=r['OC.1'];
+    const _oc1raw=r['OC_1'];
     if(_oc1raw==null||_oc1raw===''||_oc1raw!==_oc1raw)return; // skip null/NaN
     const oc1=String(_oc1raw).split('.')[0].trim();
-    if(oc1&&oc1!=='nan'&&oc1!=='NaN'&&sub&&sub!=='nan')sublineaMap[oc1]=String(sub).trim();
-  });
-  // Pass 2: OC col as fallback
-  qbData.forEach(r=>{
     const sub=r['sublinea']||r['Sublinea']||r['SUBLINEA']||'';
-    const oc=String(r['OC']||'').split('.')[0].trim();
-    if(oc&&oc!=='nan'&&oc!=='NaN'&&sub&&sub!=='nan'&&!sublineaMap[oc])sublineaMap[oc]=String(sub).trim();
+    if(oc1&&oc1!=='nan'&&oc1!=='NaN'&&sub&&sub!=='nan')sublineaMap[oc1]=String(sub).trim();
   });
 
   S.rows=Object.entries(olByOC).map(([oc,ol])=>{
