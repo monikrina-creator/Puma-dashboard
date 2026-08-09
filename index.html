@@ -567,7 +567,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">INVOICE_AMOUNT</div><div class="kpi-v xs" id="k-mfact">—</div><div class="kpi-sub">Monto Facturado</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--am),#C8780A)"></div><div class="kpi-lbl">OC Pendientes</div><div class="kpi-v" id="k-pend">—</div><div class="kpi-tr wn" id="tr-pend">● —</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--gr),#0A7A50)"></div><div class="kpi-lbl">OC DESPACHADAS</div><div class="kpi-v" id="k-recib">—</div><div class="kpi-tr up" id="tr-recib">● —</div></div>
-      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal))"></div><div class="kpi-lbl">TIENDAS</div><div class="kpi-v" id="k-cad">—</div><div class="kpi-sub">Mercadería recibida</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--cal-m),var(--cal))"></div><div class="kpi-lbl">TIENDAS</div><div class="kpi-v" id="k-cad">—</div><div class="kpi-sub">OC a Tiendas/Ecommerce</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rose-m),var(--rose-dp))"></div><div class="kpi-lbl">ECOMMERCE</div><div class="kpi-v" id="k-eco">—</div><div class="kpi-sub">OC a Internet</div></div>
       <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--rd),#A01010)"></div><div class="kpi-lbl">Rechazo Parcial</div><div class="kpi-v" id="k-rechazo">—</div><div class="kpi-tr dn" id="tr-rechazo">● —</div></div>
     <div class="kpi"><div class="kpi-bar" style="background:linear-gradient(90deg,var(--pu),#5C3CE0)"></div><div class="kpi-lbl">LEAD TIME PROM.</div><div class="kpi-v" id="k-lt-avg">—</div><div class="kpi-sub">días prom. despacho</div></div>
@@ -1054,7 +1054,7 @@ async function processFiles(){
       let fechaStr='';
       if(fa){const dt=fa instanceof Date?fa:new Date(fa);if(!isNaN(dt))fechaStr=dt.toISOString().split('T')[0];}
       resMap[oc]={tipo:canal==='ECOMMERCE'?'Ecommerce':'Cadena',
-        estado:estado==='DESPACHADA'?'Mercadería recibida':'Pendiente de despacho',
+        estado:estado==='DESPACHADA'?'Despachado':'Pendiente de despacho',
         status,fecha:fechaStr};
     });
   }
@@ -1079,6 +1079,18 @@ async function processFiles(){
         if(!b.factura&&r['FACTURA'])b.factura=String(r['FACTURA']).split('.')[0].trim();
         if(!b.division&&r['DIVISION'])b.division=String(r['DIVISION']).trim();
       });
+      // Second pass: OC.1 column for OCs not directly in col H
+      qbData.forEach(r=>{
+        const oc1=String(r['OC.1']||'').split('.')[0].trim();
+        if(!oc1||oc1==='nan')return;
+        if(!b2bMap[oc1])b2bMap[oc1]={status:'',fecha:'',hora:'',factura:'',division:''};
+        const b=b2bMap[oc1];
+        const newSt=String(r['ESTADO']||'').trim();
+        if(!b.status)b.status=newSt;
+        if(!b.fecha&&r['FECHA ENTREGA']){const dt=r['FECHA ENTREGA'] instanceof Date?r['FECHA ENTREGA']:new Date(r['FECHA ENTREGA']);if(!isNaN(dt))b.fecha=dt.toISOString().split('T')[0];}
+        if(!b.hora&&r['HORA']){const ht=r['HORA'];if(ht instanceof Date)b.hora=('0'+ht.getHours()).slice(-2)+':'+('0'+ht.getMinutes()).slice(-2);else b.hora=String(ht).substring(0,5).trim();}
+        if(!b.factura&&r['FACTURA'])b.factura=String(r['FACTURA']).split('.')[0].trim();
+      });
     }
   }
 
@@ -1095,7 +1107,14 @@ async function processFiles(){
 
   // ── OL → construir filas ──
   // Filter to OCs present in B2B (74 dispatched OCs for Falabella)
-  const b2bOCs=new Set(qbData.map(r=>String(r['OC']||'').split('.')[0].trim()).filter(Boolean));
+  // Include both OC and OC.1 values in the B2B OC set
+  const b2bOCs=new Set();
+  qbData.forEach(r=>{
+    const oc=String(r['OC']||'').split('.')[0].trim();
+    if(oc&&oc!=='nan')b2bOCs.add(oc);
+    const oc1=String(r['OC.1']||'').split('.')[0].trim();
+    if(oc1&&oc1!=='nan')b2bOCs.add(oc1);
+  });
   const olByOC={};
   olData.forEach(r=>{
     const oc=String(r['Num Order']||'').trim(); if(!oc)return;
@@ -1140,7 +1159,7 @@ async function processFiles(){
       tipo=[...so.markForNames].some(n=>n.includes('INTERNET'))?'ECOMMERCE':'TIENDA';
     } else if(!isFala){tipo=dl.tipo||'—';}
     // Estado: FALA_RESUMEN → auto por fecha
-    const estadoAuto=(!fd||fd>TODAY)?'Pendiente de despacho':'Mercadería recibida';
+    const estadoAuto=(!fd||fd>TODAY)?'Pendiente de despacho':'Despachado';
 
     // oQ y oA: GOWH es la fuente primaria (Unidades y Total)
     // SOTRACK Ordered Qty/Amt se usa solo si GOWH no tiene dato
@@ -1413,12 +1432,12 @@ function fmtLT(n){if(n==null||n===undefined)return'—';const c=n<=7?'#0D6B42':n
 function fmtD(s){if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}
 function getEst(r){return S.overrides[r.OC]||r.EstAuto;}
 function estCls(est){
-  if(est==='Mercadería recibida')return'rc';
+  if(est==='Despachado')return'rc';
   if(est==='Rechazo Parcial')return'rp';
   return'pd';
 }
 function estLbl(est){
-  if(est==='Mercadería recibida')return'✅ Recibida';
+  if(est==='Despachado')return'✅ Despachado';
   if(est==='Rechazo Parcial')return'⚠️ Rechazo Parcial';
   return'⏳ Pendiente';
 }
@@ -1435,7 +1454,7 @@ function buildKPIs(){
   const tO=R.reduce((a,r)=>a+r.oQ,0),tD=R.reduce((a,r)=>a+r.dQ,0),tI=R.reduce((a,r)=>a+r.iQ,0);
   const fr1=tO>0?Math.round(tD/tO*100):0, fr2=tO>0?Math.round(tI/tO*100):0;
   const pend=R.filter(r=>getEst(r)==='Pendiente de despacho').length;
-  const recib=R.filter(r=>getEst(r)==='Mercadería recibida').length;
+  const recib=R.filter(r=>getEst(r)==='Despachado').length;
   const rechazo=R.filter(r=>getEst(r)==='Rechazo Parcial').length;
   const cad=R.filter(r=>r.Tipo==='TIENDA').length, eco=R.filter(r=>r.Tipo==='ECOMMERCE').length;
   set('k-oc',n); set('k-fr1',fr1+'%'); set('k-fr2',fr2+'%');
@@ -1736,7 +1755,7 @@ function buildTblHTML(pid,title,cc,ic){
       <span class="f-lbl">PD</span><select class="f-sel" id="fpd-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option></select>
       <span class="f-lbl">Fecha</span><select class="f-sel" id="ffe-${pid}" onchange="doFilter('${pid}')"><option value="">Todas</option></select>
       <span class="f-lbl">Status</span><select class="f-sel" id="fst-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>DESPACHADO</option><option>EN PICKING</option><option>VAS &amp; DISTRO</option><option>PRE-DESPACHO</option><option>PRE-DISTRO</option></select>
-      <span class="f-lbl">Estado</span><select class="f-sel" id="fes-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>Mercadería recibida</option><option>Pendiente de despacho</option><option>Ampliación</option><option>Sin Capacidad</option><option>Rechazo Parcial</option></select>
+      <span class="f-lbl">Estado</span><select class="f-sel" id="fes-${pid}" onchange="doFilter('${pid}')"><option value="">Todos</option><option>Mercadería despachado</option><option>Pendiente de despacho</option><option>Ampliación</option><option>Sin Capacidad</option><option>Rechazo Parcial</option></select>
       <button class="btn-clr" onclick="clrFilter('${pid}')">✕ Limpiar</button>
     </div>
     <div class="tbl-wrap"><table class="mtbl"><thead><tr>
@@ -1817,7 +1836,7 @@ function renderRows(pid,rows,tot){
       <td>${r.Gs||'—'}</td>
       <td><select class="est-sel ${eCls}" onchange="chgEst('${r.OC}',this)">
         <option value="Pendiente de despacho" ${est==='Pendiente de despacho'?'selected':''}>⏳ Pendiente</option>
-        <option value="Mercadería recibida"   ${est==='Mercadería recibida'?'selected':''}>✅ Recibida</option>
+        <option value="Mercadería despachado"   ${est==='Despachado'?'selected':''}>✅ Despachado</option>
         <option value="Ampliación" ${est==='Ampliación'?'selected':''}>🔄 Ampliación</option>
         <option value="Sin Capacidad" ${est==='Sin Capacidad'?'selected':''}>🚫 Sin Capacidad</option>
         <option value="Rechazo Parcial"       ${est==='Rechazo Parcial'?'selected':''}>⚠️ Rechazo Parcial</option>
