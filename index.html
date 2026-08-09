@@ -1011,10 +1011,10 @@ async function processFiles(){
       s.iQ+=Number(r['Invoiced Quantity'])||0;
       s.iA+=Number(r['Invoiced Amount'])||0;
     }
+    // INVOICE_NUMBER: ONLY from Gsuite Number (col AD) — last 6 digits
     const gs=String(r['Gsuite Number']||'').replace(/[^0-9]/g,'');
     if(gs&&gs.length>=4)s.gs.add(gs.slice(-6));
-    const invN=String(r['Invoice Number']||'').replace(/[^0-9]/g,'');
-    if(invN&&invN.length>=4)s.gs.add(invN.slice(-6));
+    // Note: Invoice Number (col Z) is internal SAP number, NOT the factura
     const mfn=String(r['Mark for Name']||'').trim().toUpperCase();
     if(mfn)s.markForNames.add(mfn);
   });
@@ -1134,14 +1134,16 @@ async function processFiles(){
   // Pass 1: use OC.1 as primary (the definitive OC-to-sublinea mapping)
   qbData.forEach(r=>{
     const sub=r['sublinea']||r['Sublinea']||r['SUBLINEA']||'';
-    const oc1=String(r['OC.1']||'').split('.')[0].trim();
-    if(oc1&&oc1!=='nan'&&sub)sublineaMap[oc1]=String(sub).trim();
+    const _oc1raw=r['OC.1'];
+    if(_oc1raw==null||_oc1raw===''||_oc1raw!==_oc1raw)return; // skip null/NaN
+    const oc1=String(_oc1raw).split('.')[0].trim();
+    if(oc1&&oc1!=='nan'&&oc1!=='NaN'&&sub&&sub!=='nan')sublineaMap[oc1]=String(sub).trim();
   });
   // Pass 2: OC col as fallback
   qbData.forEach(r=>{
     const sub=r['sublinea']||r['Sublinea']||r['SUBLINEA']||'';
     const oc=String(r['OC']||'').split('.')[0].trim();
-    if(oc&&oc!=='nan'&&sub&&!sublineaMap[oc])sublineaMap[oc]=String(sub).trim();
+    if(oc&&oc!=='nan'&&oc!=='NaN'&&sub&&sub!=='nan'&&!sublineaMap[oc])sublineaMap[oc]=String(sub).trim();
   });
 
   S.rows=Object.entries(olByOC).map(([oc,ol])=>{
