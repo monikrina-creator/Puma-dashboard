@@ -666,7 +666,7 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;l
 <!-- ══ DEPARTAMENTOS ══ -->
 <div class="page" id="page-departamentos">
   <div class="pg-hdr"><div><div class="pg-title">Departamentos</div><div class="pg-sub">Métricas, fill rate y quiebres por área</div></div></div>
-  <div class="pg-body"><div class="dep-grid" id="dep-grid"><div style="grid-column:1/-1"><div class="empty"><div class="empty-icon">🏷️</div><div class="empty-t">Sin datos</div><div class="empty-s">Carga los archivos para ver el análisis</div></div></div></div></div>
+  <div class="pg-body"><div id="sublinea-legend" style="margin-bottom:14px"></div><div class="dep-grid" id="dep-grid"><div style="grid-column:1/-1"><div class="empty"><div class="empty-icon">🏷️</div><div class="empty-t">Sin datos</div><div class="empty-s">Carga los archivos para ver el análisis</div></div></div></div></div>
 </div>
 
 <!-- ══ QUIEBRES ══ -->
@@ -1074,8 +1074,8 @@ async function processFiles(){
         const b=b2bMap[oc];
         const newSt=String(r['ESTADO']||'').trim();
         if(!b.status||(rankSt[newSt]||0)>(rankSt[b.status]||0))b.status=newSt;
-        if(!b.fecha&&r['FECHA ENTREGA']){const dt=r['FECHA ENTREGA'] instanceof Date?r['FECHA ENTREGA']:new Date(r['FECHA ENTREGA']);if(!isNaN(dt))b.fecha=dt.toISOString().split('T')[0];}
-        if(!b.hora&&r['HORA']){const ht=r['HORA'];if(ht instanceof Date)b.hora=('0'+ht.getHours()).slice(-2)+':'+('0'+ht.getMinutes()).slice(-2);else b.hora=String(ht).substring(0,5).trim();}
+        if(!b.fecha&&r['FECHA ENTREGA']){const dt=parseFechaFlexible(r['FECHA ENTREGA']);if(dt)b.fecha=dt.toISOString().split('T')[0];}
+        if(!b.hora&&r['HORA']){const ht=r['HORA'];if(ht instanceof Date)b.hora=('0'+ht.getHours()).slice(-2)+':'+('0'+ht.getMinutes()).slice(-2);else{const s=String(ht).trim();b.hora=/^\d{1,2}:\d{2}/.test(s)?s.substring(0,5):s;}}
         if(!b.factura&&r['FACTURA'])b.factura=String(r['FACTURA']).split('.')[0].trim();
         if(!b.division&&r['DIVISION'])b.division=String(r['DIVISION']).trim();
       });
@@ -1133,7 +1133,32 @@ async function processFiles(){
     const sub=r['sublinea']||r['Sublinea']||r['SUBLINEA']||'';
     if(oc1&&oc1!=='nan'&&oc1!=='NaN'&&sub&&sub!=='nan')sublineaMap[oc1]=String(sub).trim();
   });
+  // ── SUBLINEA -> nombre de departamento (resumen/leyenda) ──
+  // La columna de Departamento (junto a sublinea en la 2da tabla del B2B)
+  // no tiene encabezado en el Excel, así que se detecta por posición:
+  // es la clave que sigue a 'sublinea' en el orden de columnas del objeto.
+  const sublineaNames={};
+  if(qbData.length){
+    const sampleKeys=Object.keys(qbData[0]);
+    const subIdx=sampleKeys.findIndex(k=>/^sublinea$/i.test(k));
+    const depKey=subIdx>=0&&subIdx+1<sampleKeys.length?sampleKeys[subIdx+1]:null;
+    if(depKey){
+      const counts={}; // {sublineaCode: {depName: count}}
+      qbData.forEach(r=>{
+        const sub=r['sublinea']||r['Sublinea']||r['SUBLINEA']||'';
+        const dep=r[depKey];
+        if(!sub||sub==='nan'||!dep)return;
+        const s=String(sub).trim(), d=String(dep).trim();
+        if(!counts[s])counts[s]={};
+        counts[s][d]=(counts[s][d]||0)+1;
+      });
+      Object.entries(counts).forEach(([s,deps])=>{
+        sublineaNames[s]=Object.entries(deps).sort((a,b)=>b[1]-a[1])[0][0];
+      });
+    }
+  }
 
+  S.sublineaNames=sublineaNames;
   S.rows=Object.entries(olByOC).map(([oc,ol])=>{
     const so=soMap[oc]||{}; const dl=dlMap[oc]||{};
     const res=resMap[oc]||{};   // FALA_RESUMEN fallback
@@ -1422,6 +1447,23 @@ function exportSnapshot(){
 
 // ── HELPERS ───────────────────────────────────────────────
 function montoNum(v){if(typeof v==='number')return v;return parseInt(String(v).replace(/[^0-9]/g,''))||0;}
+// Parsea fechas que llegan como texto libre en español (ej. "miercoles, 5 de agosto de 2026",
+// "jueves 13 de agosto 2026") cuando la celda de origen no es una fecha real de Excel.
+// new Date() nativo no entiende estos formatos y los descarta silenciosamente -> fecha vacía.
+const MESES_ES={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
+function parseFechaFlexible(v){
+  if(v instanceof Date) return isNaN(v)?null:v;
+  if(v==null||v==='') return null;
+  const d1=new Date(v);
+  if(!isNaN(d1)) return d1;
+  const s=String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); // quita tildes
+  const m=s.match(/(\d{1,2})\s+de\s+([a-z]+)\s+(?:de\s+)?(\d{4})/);
+  if(m){
+    const dia=parseInt(m[1],10), mes=MESES_ES[m[2]], anio=parseInt(m[3],10);
+    if(mes!=null){const d2=new Date(anio,mes,dia);if(!isNaN(d2))return d2;}
+  }
+  return null;
+}
 function fmt(n){return Math.round(n||0).toLocaleString('es-CL');}
 function fmtM(n){return n>0?'$'+fmt(n):'—';}
 function fmtLT(n){if(n==null||n===undefined)return'—';const c=n<=7?'#0D6B42':n<=10?'#8A5A00':'#A01010';const bg=n<=7?'#D8F7EC':n<=10?'#FEF3DC':'#FDEAEA';return '<span style="font-weight:700;color:'+c+';background:'+bg+';padding:2px 7px;border-radius:8px;font-size:10px">'+(n===0?'hoy':n+' días')+'</span>';}
@@ -2220,6 +2262,7 @@ function closeMo(e){if(!e||e.target===document.getElementById('mo-ov'))document.
 // ── DEPARTAMENTOS ─────────────────────────────────────────
 function buildDeptos(){
   const dm=depMap(),maxM=Math.max(...Object.values(dm).map(v=>v.oA),1);
+  renderSublineaLegend();
   document.getElementById('dep-grid').innerHTML=Object.entries(dm).sort((a,b)=>b[1].oA-a[1].oA).map(([name,v])=>`
     <div class="dep-card">
       <div class="dep-nm">${name}<span class="pill p-cal">${v.ocs.length} OC</span></div>
@@ -2232,6 +2275,23 @@ function buildDeptos(){
       ${v.sublineas&&v.sublineas.length?`<div class="dep-sub-title">Por sublinea</div>`+v.sublineas.map(sl=>`
       <div class="dep-sl-row"><span class="pill p-gy" style="font-size:9px">${sl.name}</span><span style="font-size:11px;color:var(--tx2)">${fmtM(sl.oA)}</span><span style="font-size:11px;color:var(--cal-d)"> → ${fmtM(sl.dA)}</span><span class="fr ${frCls(sl.fr)}" style="margin-left:4px">${sl.fr}%</span></div>`).join(''):'${\'\''}
     </div>`).join('');
+}
+
+// Card resumen: SUBLINEA -> nombre de departamento (cruce con la data de B2B).
+// Es provisional: la usuaria validará estas equivalencias antes de presentar el dashboard.
+function renderSublineaLegend(){
+  const el=document.getElementById('sublinea-legend');
+  if(!el)return;
+  const names=S.sublineaNames||{};
+  const codes=Object.keys(names).sort();
+  if(!codes.length){el.innerHTML='';return;}
+  el.innerHTML=`
+    <div class="dep-card" style="grid-column:1/-1">
+      <div class="dep-nm">SUBLINEA <span class="pill p-cal">${codes.length}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-top:8px">
+        ${codes.map(c=>`<div class="dep-sl-row"><span class="pill p-gy" style="font-size:9px">${c}</span><span style="font-size:11px;color:var(--tx2)">${names[c]}</span></div>`).join('')}
+      </div>
+    </div>`;
 }
 
 // ── EXPORTS ───────────────────────────────────────────────
